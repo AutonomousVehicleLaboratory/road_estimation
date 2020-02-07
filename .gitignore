@@ -1,0 +1,7 @@
+*
+
+!*/
+!*.py
+!.gitignore
+!README.md
+!bounding_boxes.txt
