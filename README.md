@@ -1,5 +1,7 @@
 Road estimation from point cloud
 
+NOTE: data for point cloud is not uploaded since it is large.
+
 - [ ] Get data from YOLO and our vehicle
 - [ ] check the synchronization
 - [ ] test with real data
