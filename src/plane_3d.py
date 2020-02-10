@@ -113,6 +113,33 @@ class Plane3D:
         
         self.param = np.array([[self.a, self.b, self.c, self.d]]).T
     
+    def normal_angle_to_vector(self, vector):
+        """ return the angle between the normal vector of the plane and another given vector
+
+        Param:
+            vector: 3 by 1 vector
+        return:
+            angle: a scaler represents the angle
+        """
+        vector = vector.reshape([3,1]) / np.linalg.norm(vector)
+        self.normalize()
+        angle = np.arccos(vector.T @ self.param[0:3,:])
+        return angle[0,0]
+    
+    def normal_angle_to_vector_xz(self, vector):
+        """ return the angle between the normal vector of the plane and another given vector along xz plane
+
+        Param:
+            vector: 3 by 1 vector
+        return:
+            angle: a scaler represents the angle
+        """
+        vector = vector.reshape([3,1])
+        innner = (vector[0,0]*self.a + vector[2,0]*self.c)
+        scaling = np.sqrt(vector[0,0]**2 + vector[2,0]**2) * np.sqrt(self.a**2 + self.c**2)
+        angle = np.arccos(innner / scaling)
+        return angle
+    
     def plane_ray_intersection(self, d, C):
         lam = (-1*self.param[0:3,:].T @ C - self.d) / (self.param[0:3,:].T @ d)
         intersection = d*lam + C
@@ -156,11 +183,30 @@ def test_create_plane_from_vectors_and_point():
     plane.vis(ax)
     plt.show()
 
+def test_normal_angle():
+    plane1 = Plane3D(0,0,1,0)
+    plane2 = Plane3D(0.2, 0, 1, 0)
+    plane3 = Plane3D(1, 0, 1.732, 0)
+    plane4 = Plane3D(0.1, 0.3, 1, 0)
+    plane_list = [plane1, plane2, plane3, plane4]
+    
+    vector = np.array([[0,0,1.0]]).T
+    
+    for plane in plane_list:
+        print(plane.normal_angle_to_vector(vector) * 180 / np.pi, end=" ")
+    
+    print(" ")
+
+    for plane in plane_list:
+        print(plane.normal_angle_to_vector_xz(vector) * 180 / np.pi, end=" ")
+
+
 # main
 def main():
     test_plane_3d()
     test_plane_fit()
     test_create_plane_from_vectors_and_point()
+    test_normal_angle()
 
 if __name__ == "__main__":
     main()

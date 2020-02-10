@@ -99,9 +99,12 @@ def vis_multiple(planes, pcds, dim_2d=True):
     if dim_2d == True:
         ax = fig.add_subplot(211)
         ax2 = fig.add_subplot(212)
+        title = 'Plane angles:'
         
         for plane, pcd in zip(planes, pcds):
-        
+            angle = plane.normal_angle_to_vector_xz(np.array([[0,0,1]])) * 180 / np.pi
+            title += '{:.2f} '.format(angle)
+
             pcd.color_points_by_distance_plane(plane, threshold=0.15)
             plot = pcd.vis(ax, dim_2d=True, s=3, lim=[-20, 40, -12, 12])
             
@@ -125,6 +128,7 @@ def vis_multiple(planes, pcds, dim_2d=True):
         ax.set_title('[{:.2f},{:.2f}] boundary'.format(-0.15, 0.15))
         ax2.set_title("threshold: -0.3, -0.15, -0.05, 0.05, 0.15, 0.3")
         plt.colorbar(plot)
+        plt.suptitle(title)
     else:
         ax = fig.add_subplot(111, projection='3d')
         plane.vis(ax)
@@ -277,13 +281,16 @@ def test_estimation_combine_planes(plane, pcd):
             print(i, "{:.1f}".format(depth_thred_min), "{:.1f}".format(depth_thred_max), sum_inner, sum_outer, "{:.4f}".format(ratio))
         if ratio < 0.9 and sum_outer > 50:
             weight_dict = {'method':"x norm", 'param':{'x0':(depth_thred_max+depth_thred_min)/2.0, 'norm':2}}
-            pcd_in, pcd_out = pcd_close.clip_by_x([depth_thred_min - 10, np.inf])
-            plane_add, _, _, _ = sac.ransac(pcd_in.data.T, weight=weight_dict)
+            pcd_close_in, pcd_close_out = pcd_close.clip_by_x([depth_thred_min - 10, np.inf])
+            pcd_in, pcd_out = pcd.clip_by_x([depth_thred_min - 10, np.inf])
+            plane_add, _, _, _ = sac.ransac(pcd_close_in.data.T, weight=weight_dict)
             planes.append(plane_add)
             if len(pcds) == 0:
                 pcds.append(pcd_out)
             pcds.append(pcd_in)
             distance_thresholds.append(depth_thred_min)
+    if len(pcds) == 0:
+        pcds.append(pcd)
     vis_multiple(planes, pcds, dim_2d=True)
 
     plt.show()
