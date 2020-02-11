@@ -5,3 +5,6 @@
 !.gitignore
 !README.md
 !bounding_boxes.txt
+!*.xml
+!CMakeLists.txt
+!*.msg

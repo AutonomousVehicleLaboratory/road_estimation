@@ -2,7 +2,7 @@ Road estimation from point cloud
 
 NOTE: data for point cloud is not uploaded since it is large.
 
-- [ ] Get data from YOLO and our vehicle
+- [x] Get data from YOLO and our vehicle
 - [ ] check the synchronization
 - [ ] test with real data
 - [ ] Calibrate the lidar and camera
@@ -33,3 +33,8 @@ Mark examples
 - 57 skew road
 - 5 flat road
 
+ROS
+- add #!/usr/bin/env python at the beginning of the file
+- chmod +x to make it executable (everytime you modify it)
+- rosrun road_estimation road_estimation
+- rviz add panel, image viewer, then you can add bounding box to it.
