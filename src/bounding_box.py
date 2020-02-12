@@ -12,12 +12,14 @@ import numpy as np
 
 # classes
 class BoundingBox:
-    def __init__(self, left, top, right, bottom):
+    def __init__(self, left, top, width, height, angle=0.0, label="None"):
         self.left = left
         self.top = top
-        self.right = right
-        self.bottom = bottom
-        self.bbox = np.array([left, top, right, bottom])
+        self.width = width
+        self.height = height
+        self.label = label
+        self.angle = 0.0 # currently do not accept angle
+        self.bbox = np.array([left, top, width, height])
     
     def bottom_point(self):
         """ calculate the botton middle point of the bounding box, 
@@ -27,12 +29,13 @@ class BoundingBox:
         Return:
             Ix, Iy - the x, y position of the pixel
         """
-        return (self.left + self.right) / 2.0, self.bottom
+        return self.left + (self.width / 2.0), self.top + self.height
     
     def vis(self, ax):
-        x = [self.left, self.left, self.right, self.right, self.left]
-        y = [self.top, self.bottom, self.bottom, self.top, self.top]
+        x = [self.left, self.left, self.left+self.width, self.left+self.width, self.left]
+        y = [self.top, self.top+self.height, self.top+self.height, self.top, self.top]
         ax.plot(x, y)
+        ax.text(self.left, self.top, self.label)
 
     
 # functions
