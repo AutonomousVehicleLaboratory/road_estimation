@@ -9,22 +9,24 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import pyplot as plt
 from plane_3d import Plane3D
+from bounding_box import BoundingBox
 
 # parameters
 
 
 # classes
 class Camera:
-    def __init__(self, K, R, t, imSize = None):
+    def __init__(self, K, R, t, imSize = None, id=0):
+        self.id = id
         self.K = K
         self.R = R
         self.t = t
         Rt = np.zeros([3,4])
         Rt[0:3, 0:3] = R
         Rt[0:3, 3:4] = t
-        self.P = K @ Rt                         # camera projection matrix (world to image)
+        self.P = np.matmul( K , Rt)             # camera projection matrix (world to image)
         self.K_inv = np.linalg.inv(self.K)      # inverse of intrisic for convenience
-        self.C_world_inhomo = - R.T @ t         # camera center in the world coordinate using inhomogeneous representation
+        self.C_world_inhomo =np.matmul( - R.T , t)  # camera center in the world coordinate using inhomogeneous representation
         self.imSize = imSize                    # image size
 
     def pixel_to_ray(self, Ix, Iy, world=True):
@@ -37,12 +39,12 @@ class Camera:
             line - 3D line """
         x = np.array([[Ix, Iy, 1.0]]).T
         if world == True:
-            X_world_inhomo = self.R.T @ (self.K_inv @ x - self.t)
+            X_world_inhomo = np.matmul(self.R.T ,(np.matmul(self.K_inv , x)  - self.t))
             d = X_world_inhomo - self.C_world_inhomo
             d = d / np.sign(d[0,0]) / np.linalg.norm(d)
             C = self.C_world_inhomo
         else:
-            X_cam_inhomo = self.K_inv @ x
+            X_cam_inhomo =np.matmul( self.K_inv , x) 
             d = X_cam_inhomo / np.sign(X_cam_inhomo[2,0]) / np.linalg.norm(X_cam_inhomo)
             C = np.zeros([3,1])
         
@@ -80,7 +82,7 @@ def main():
                   [0, 0, -1],
                   [1, 0, 0]])
     C_world = np.array([[0, 0.5, 0]]).T
-    t = -1 * R @ C_world
+    t = np.matmul( -1 * R , C_world) 
     imSize = [1200, 400]
     cam = Camera(K, R, t, imSize=imSize)
     test_pixel_to_ray(cam)

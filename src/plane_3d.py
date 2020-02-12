@@ -5,9 +5,11 @@ Date:January 25, 2020
 """
 
 # module
+from __future__ import absolute_import, division, print_function, unicode_literals
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
+
 
 # parameters
 
@@ -80,7 +82,7 @@ class Plane3D:
     def distance_to_plane(self, data):
         norm = np.sqrt(self.a**2 + self.b**2 + self.c**2)
         if norm > 1e-3:
-            distance = np.abs(data @ self.param[0:3,:] + self.d).reshape([-1]) / norm
+            distance = np.abs( np.matmul(data , self.param[0:3,:] ) + self.d).reshape([-1]) / norm
         else:
             distance = np.ones((data.shape[0])) * np.inf
         return distance
@@ -88,9 +90,9 @@ class Plane3D:
     def distance_to_plane_signed(self, data):
         norm = np.sqrt(self.a**2 + self.b**2 + self.c**2)
         if norm > 1e-3:
-            distance = (data @ self.param[0:3,:] + self.d).reshape([-1]) / norm
+            distance = ( np.matmul(data , self.param[0:3,:] ) + self.d).reshape([-1]) / norm
         else:
-            distance = (data @ self.param[0:3,:] + self.d).reshape([-1]) * np.inf
+            distance = ( np.matmul(data , self.param[0:3,:] ) + self.d).reshape([-1]) * np.inf
         return distance
 
     def normalize(self):
@@ -123,7 +125,7 @@ class Plane3D:
         """
         vector = vector.reshape([3,1]) / np.linalg.norm(vector)
         self.normalize()
-        angle = np.arccos(vector.T @ self.param[0:3,:])
+        angle = np.arccos( np.matmul(vector.T , self.param[0:3,:]) )
         return angle[0,0]
     
     def normal_angle_to_vector_xz(self, vector):
@@ -141,7 +143,7 @@ class Plane3D:
         return angle
     
     def plane_ray_intersection(self, d, C):
-        lam = (-1*self.param[0:3,:].T @ C - self.d) / (self.param[0:3,:].T @ d)
+        lam = (-1* np.matmul(self.param[0:3,:].T , C ) - self.d) / ( np.matmul(self.param[0:3,:].T , d) )
         intersection = d*lam + C
         return intersection
 
