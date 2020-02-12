@@ -349,7 +349,7 @@ def test_bounding_box_in_image():
     ax = fig.add_subplot(111)
     
     bbox_data = np.loadtxt('data/bounding_boxes.txt')
-    bboxes = [BoundingBox(box[0], box[1], box[2], box[3]) for box in bbox_data]
+    bboxes = [BoundingBox(box[0], box[1], box[2]-box[0], box[3]-box[1]) for box in bbox_data]
     for box in bboxes:
         box.vis(ax)
     K = np.array([[7.070493000000e+02, 0.000000000000e+00, 6.040814000000e+02], 
@@ -376,7 +376,7 @@ def test_bounding_box_to_world():
     ax = fig.add_subplot(spec[0,0:2])
     
     bbox_data = np.loadtxt('data/bounding_boxes.txt')
-    bboxes = [BoundingBox(box[0], box[1], box[2], box[3]) for box in bbox_data]
+    bboxes = [BoundingBox(box[0], box[1], box[2]-box[0], box[3]-box[1]) for box in bbox_data]
     Ixlist, Iylist = [], []
     for box in bboxes:
         box.vis(ax)
