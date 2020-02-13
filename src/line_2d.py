@@ -36,7 +36,7 @@ class Line2D:
         return cls(a,b,c)
     
     def eval(self, data):
-        distance = np.abs(data @ self.param[0:2,:] + self.c).reshape([-1]) / np.sqrt(self.a**2 + self.b**2)
+        distance = np.abs(np.matmul(data , self.param[0:2,:]) + self.c).reshape([-1]) / np.sqrt(self.a**2 + self.b**2)
         return distance
 
     def normalize(self):

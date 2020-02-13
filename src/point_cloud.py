@@ -21,7 +21,7 @@ class PointCloud:
         self.color = color # n by 1 
     
     def rotate(self, tf):
-        self.data = tf.getMatrix() @ self.data
+        self.data = np.matmul(tf.getMatrix() , self.data)
     
     def clip_by_x(self, threshold):
         idx = np.logical_and(self.data[0, :] > threshold[0], self.data[0,:] < threshold[1])
