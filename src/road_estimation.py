@@ -14,11 +14,13 @@ import numpy as np
 # from std_msgs.msg import String
 import sensor_msgs.point_cloud2 as pc2
 from sensor_msgs.msg import PointCloud2, PointField
+from visualization_msgs.msg import MarkerArray
+# from visualization_msgs.msg import Marker
+from geometry_msgs.msg import Quaternion
 
 from autoware_msgs.msg import DetectedObjectArray
 from autoware_msgs.msg import DetectedObject
-from visualization_msgs.msg import MarkerArray
-# from visualization_msgs.msg import Marker
+
 
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import pyplot as plt
@@ -27,7 +29,7 @@ import matplotlib.gridspec as gridspec
 
 from plane_3d import Plane3D
 from point_cloud import PointCloud
-# from rotation import Rotation
+from rotation import Quaternion as Quaternion_self
 from ransac import RANSAC
 from camera import Camera
 from bounding_box import BoundingBox
@@ -163,14 +165,22 @@ def estimate_plane(pcd):
     return plane1
 
 def create_and_publish_plane_markers(plane):
+    v1 = np.array([[0, 0, 1.0]]).T
+    v2 = np.array([[plane.a, plane.b, plane.c]]).T
+    q_self = Quaternion_self.create_quaternion_from_vector_to_vector(v1, v2)
+    q = Quaternion(q_self.x, q_self.y, q_self.z, q_self.w)
+    marker_array = MarkerArray()
+    visualize_marker([10,0,(-plane.a * 10 - plane.d) / plane.c], marker_array, frame_id="velodyne", mkr_type='cube', orientation=q, scale=[20,2,0.05])
+    return marker_array
+    """
     xx, yy = np.meshgrid(range(11), range(11))
     z = (-plane.a * xx - plane.b * yy - plane.d) * 1. / plane.c
-    marker_array = MarkerArray()
+    
     for x, y, z in zip(xx, yy, z):
         for xl, yl, zl in zip(x, y, z):
-            visualize_marker([xl,yl,zl], marker_array, frame_id="velodyne")
-    return marker_array
-
+            
+    
+    """
 
 def pcd_callback(msg):
     global plane, pub_plane_markers
