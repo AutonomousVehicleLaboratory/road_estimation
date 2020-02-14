@@ -17,7 +17,7 @@ from sensor_msgs.msg import PointCloud2, PointField
 
 from autoware_msgs.msg import DetectedObjectArray
 from autoware_msgs.msg import DetectedObject
-# from visualization_msgs.msg import MarkerArray
+from visualization_msgs.msg import MarkerArray
 # from visualization_msgs.msg import Marker
 
 from mpl_toolkits.mplot3d import Axes3D
@@ -32,12 +32,14 @@ from ransac import RANSAC
 from camera import Camera
 from bounding_box import BoundingBox
 from utils import clip_pcd_by_distance_plane
+from vis import visualize_marker
 
 np.set_printoptions(precision=3)
 
 # parameters
 global plane
-
+global pub_intersect_markers
+global pub_plane_markers
 # classes
 
 
@@ -79,7 +81,7 @@ def camera_setup_6():
     return cam
 
 def display_bboxes_in_world( camera, bboxes, ax1, ax2):
-    global plane
+    global plane, pub_intersect_markers
     ax1.cla()
     ax2.cla()
     Ixlist, Iylist = [], []
@@ -93,12 +95,13 @@ def display_bboxes_in_world( camera, bboxes, ax1, ax2):
 
     # plane = Plane3D(0., 0., 1, 2)
     
-    
+    vis_array = MarkerArray()
     xlist, ylist = [], []
     for bbox in bboxes:
         d, C = camera.bounding_box_to_ray(bbox)
         intersection = plane.plane_ray_intersection(d, C)
         # print(intersection[0,0],'\t', intersection[1,0],'\t', intersection[2,0])
+        visualize_marker(intersection, vis_array, frame_id="velodyne")
         xlist.append(intersection[0,0])
         ylist.append(intersection[1,0])
     ax2.set_xlim([0, 80])
@@ -106,6 +109,7 @@ def display_bboxes_in_world( camera, bboxes, ax1, ax2):
     ax2.scatter(xlist, ylist)
     plt.title("bird eye view")
     plt.suptitle("reproject bounding box to the world")
+    pub_intersect_markers.publish(vis_array)
 
     plt.pause(0.001)
 
@@ -158,8 +162,18 @@ def estimate_plane(pcd):
     print('Plane params:', plane1.param.T)
     return plane1
 
+def create_and_publish_plane_markers(plane):
+    xx, yy = np.meshgrid(range(11), range(11))
+    z = (-plane.a * xx - plane.b * yy - plane.d) * 1. / plane.c
+    marker_array = MarkerArray()
+    for x, y, z in zip(xx, yy, z):
+        for xl, yl, zl in zip(x, y, z):
+            visualize_marker([xl,yl,zl], marker_array, frame_id="velodyne")
+    return marker_array
+
+
 def pcd_callback(msg):
-    global plane
+    global plane, pub_plane_markers
     print(msg.height, msg.width)
     pcd_original = np.empty((msg.width,3))
     for i, el in enumerate( pc2.read_points(msg, field_names = ("x", "y", "z"), skip_nans=True)):
@@ -169,12 +183,13 @@ def pcd_callback(msg):
     # print(len(pcd_original))
     pcd = PointCloud(pcd_original.T)
     plane = estimate_plane(pcd)
+    marker_array = create_and_publish_plane_markers(plane)
+    pub_plane_markers.publish(marker_array)
 
 
 # main
 def main():
-    
-    
+    global pub_intersect_markers, pub_plane_markers
     rospy.init_node("road_estimation")
     
     fig = plt.figure(figsize=(16,8))
@@ -190,6 +205,9 @@ def main():
     sub_bbox_6 = rospy.Subscriber("camera6/detection/vision_objects", DetectedObjectArray, bbox_array_callback, [cam6, ax1, ax2])
     sub_pcd = rospy.Subscriber("/points_raw", PointCloud2, pcd_callback)
 
+    # Publisher
+    pub_intersect_markers = rospy.Publisher("/vision_objects_position_rviz", MarkerArray, queue_size=10)
+    pub_plane_markers = rospy.Publisher("/estimated_plane_rviz", MarkerArray, queue_size=10)
     #rospy.spin()
     plt.show(block=True)
 
