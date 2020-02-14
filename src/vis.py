@@ -15,7 +15,7 @@ from visualization_msgs.msg import Marker
 
 
 # functions
-def visualize_marker(point, marker_arr, x_id=0, frame_id="base_link", mkr_type="sphere"):
+def visualize_marker(point, marker_arr, x_id=0, frame_id="base_link", mkr_type="sphere", orientation = None, scale = 1):
     marker = Marker()
     marker.header.frame_id = frame_id.encode("ascii", "ignore")
     marker.header.stamp = rospy.get_rostime()
@@ -32,17 +32,30 @@ def visualize_marker(point, marker_arr, x_id=0, frame_id="base_link", mkr_type="
         marker.type = marker.TRIANGLE_LIST
     elif mkr_type == "arrow":
         marker.type = marker.ARROW
+    elif mkr_type == "cube":
+        marker.type = marker.CUBE
     else:
         marker.type = marker.SPHERE
+
     # Location of Marker
     marker.pose.position.x = point[0] 
     marker.pose.position.y = point[1]
     marker.pose.position.z = point[2]
+    if not orientation is None:
+        marker.pose.orientation = orientation
 
     # Scale of Marker
-    marker.scale.x = 3
-    marker.scale.y = 3
-    marker.scale.z = 3
+    if type(scale) == int:
+        marker.scale.x = scale
+        marker.scale.y = scale
+        marker.scale.z = scale
+    elif len(scale) == 3:
+        marker.scale.x = scale[0]
+        marker.scale.y = scale[1]
+        marker.scale.z = scale[2]
+    else:
+        print("unexpected scale for marker!")
+        exit()
 
     # Marker ID
     marker.id = x_id 
