@@ -4,11 +4,12 @@ NOTE: data for point cloud is not uploaded since it is large.
 
 - [x] Get data from YOLO and our vehicle
 - [ ] check the synchronization
-- [ ] test with real data
-- [ ] Calibrate the lidar and camera
-- [ ] combine two planes
-- [X] RANSAC based implementation of plane estimation tested.
-- [X] Implemented bin statistics, this can be used to evaluate the performance.
+- [x] test with real data
+- [ ] debug the projection (plane estimation is correct)
+- [x] Calibrate the lidar and camera
+- [x] combine two planes
+- [x] RANSAC based implementation of plane estimation tested.
+- [x] Implemented bin statistics, this can be used to evaluate the performance.
 And also form the basis of adaptive modeling.
 
 1. As said, the hyper parameter for ransac is very important.
