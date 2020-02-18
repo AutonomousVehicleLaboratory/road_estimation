@@ -12,7 +12,6 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   geometry_msgs
   sensor_msgs
-  genmsg
   cv_bridge
   message_generation
   autoware_msgs
@@ -119,7 +118,6 @@ catkin_package(
     cv_bridge
     autoware_msgs
 #  DEPENDS system_lib
-  
 )
 
 ###########
