@@ -7,6 +7,7 @@ Date:February 13, 2020
 # module
 import rospy
 from visualization_msgs.msg import Marker
+from geometry_msgs.msg import Point
 
 # parameters
 
@@ -15,10 +16,14 @@ from visualization_msgs.msg import Marker
 
 
 # functions
-def visualize_marker(point, marker_arr, x_id=0, frame_id="base_link", mkr_type="sphere", orientation = None, scale = 1):
+def visualize_marker(point, mkr_array = None, mkr_id=0, frame_id="base_link", mkr_type="sphere", orientation = None, scale = 0.1, points = None):
     marker = Marker()
     marker.header.frame_id = frame_id.encode("ascii", "ignore")
     marker.header.stamp = rospy.get_rostime()
+    
+    # Marker ID
+    marker.id = mkr_id # each marker in the array needs to be assign to a differen id
+    marker.lifetime.secs = 1
 
     # Color of Marker
     marker.color.a = 0.8
@@ -34,6 +39,8 @@ def visualize_marker(point, marker_arr, x_id=0, frame_id="base_link", mkr_type="
         marker.type = marker.ARROW
     elif mkr_type == "cube":
         marker.type = marker.CUBE
+    elif mkr_type == "line_strip":
+        marker.type = marker.LINE_STRIP
     else:
         marker.type = marker.SPHERE
 
@@ -45,7 +52,7 @@ def visualize_marker(point, marker_arr, x_id=0, frame_id="base_link", mkr_type="
         marker.pose.orientation = orientation
 
     # Scale of Marker
-    if type(scale) == int:
+    if type(scale) == int or type(scale) == float:
         marker.scale.x = scale
         marker.scale.y = scale
         marker.scale.z = scale
@@ -57,10 +64,18 @@ def visualize_marker(point, marker_arr, x_id=0, frame_id="base_link", mkr_type="
         print("unexpected scale for marker!")
         exit()
 
-    # Marker ID
-    marker.id = x_id 
+    if mkr_type == "line_strip":
+        for pti in points:
+            pt = Point()
+            pt.x = pti[0]
+            pt.y = pti[1]
+            pt.z = pti[2]
+            marker.points.append(pt)    
 
-    marker_arr.markers.append(marker)
+    if mkr_array is None:
+        return marker
+    else:
+        mkr_array.markers.append(marker)
 
 # main
 def main():
