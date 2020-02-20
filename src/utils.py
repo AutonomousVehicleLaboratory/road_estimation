@@ -50,6 +50,14 @@ def test_clip_pcd_by_distance_plane(pcd):
     pcd_close.vis(ax)
     # plt.show()
 
+def homogenize(x):
+    # converts points from inhomogeneous to homogeneous coordinates
+    return np.vstack((x,np.ones((1,x.shape[1]))))
+
+def dehomogenize(x):
+    # converts points from homogeneous to inhomogeneous coordinates
+    return x[:-1]/x[-1]
+
 # main
 def main():
     pass
