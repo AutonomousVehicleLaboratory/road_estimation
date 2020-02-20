@@ -311,10 +311,43 @@ def test_cam_back_project():
     x = np.array([[1, 1000, 1000, 1000, 1000, 1000, 800, 600, 400, 604],
               [1, 500, 400, 300, 200, 300, 300, 300, 300, 300]])
     plane = Plane3D(0., 0., 1, 2)
-    for i in range(x.shape[1]):
-        d, C = cam.pixel_to_ray(x[0,i], x[1,i])
-        intersection = plane.plane_ray_intersection(d, C)
-        print(x[0,i],'\t', x[1,i],'\t', intersection[0,0],'\t', intersection[1,0],'\t', intersection[2,0])
+    d_vec, C_vec = cam.pixel_to_ray_vec(x)
+    intersection_vec = plane.plane_ray_intersection_vec(d_vec, C_vec)
+    print(np.concatenate([x.T, intersection_vec.T], axis=1))
+    pass
+
+def test_cam_back_project_convex_hull():
+    fig = plt.figure(figsize=(16,12))
+    spec = gridspec.GridSpec(2,3)
+
+    ax = fig.add_subplot(spec[0,0:2])
+    plt.title("image")
+
+    bird_eye_coordinates = np.array([[0, 40], [-15, 15]])
+    far_pts = np.concatenate([bird_eye_coordinates, -2*np.ones((1,2))], axis=0)
+    
+    cam = camera_setup_6()
+    far_pts_image = cam.get_image_coordinate(far_pts)
+
+    x = np.array([[400, 300, 1100, 1000, 400],
+                  [1150, 1200, 1200, 1150, 1150]])
+    plane = Plane3D(0., 0., 1, 2)
+    
+    ax2 = fig.add_subplot(spec[1,:])
+    
+    plane = Plane3D(0., 0., 1, 2)
+    d_vec, C_vec = cam.pixel_to_ray_vec(x)
+    intersection_vec = plane.plane_ray_intersection_vec(d_vec, C_vec)
+    print(np.concatenate([x.T, intersection_vec.T], axis=1))
+    
+    ax2.set_xlim(bird_eye_coordinates[0])
+    ax2.set_ylim(bird_eye_coordinates[1])
+    cam.show_image(ax)
+    ax.scatter(x[0,:], x[1,:])
+    ax2.plot(intersection_vec[0,:], intersection_vec[1,:])
+    plt.title("bird eye view")
+    plt.suptitle("reproject bounding box to the world")
+    plt.show()
 
 def test_bounding_box_in_image():
     
@@ -399,20 +432,21 @@ def camera_setup_6():
                   [0.000000000000e+00, 7.070493000000e+02, 1.805066000000e+02],
                   [0.000000000000e+00, 0.000000000000e+00, 1.000000000000e+00]])
     """
-    """
+    
     Rt = np.array([[ -2.1022535018250471e-01, -9.2112145235168197e-02, 9.7330398891652492e-01, -1.4076865278184414e-02],
                    [ -9.7735897207277012e-01, -4.6117027185500481e-03, -2.1153763709301088e-01, -3.1732881069183350e-01],
                    [ 2.3973774202277975e-02, -9.9573795995643932e-01, -8.9057134763516621e-02, -7.2184838354587555e-02],
                    [ 0., 0., 0., 1. ]])
-    R = Rt[0:3, 0:3]
-    t = Rt[0:3, 3:4]
+    R = Rt[0:3, 0:3].T
+    t = -np.matmul(R, Rt[0:3, 3:4])
     """
     R = np.array([[0., -1, 0],
                   [0, 0, -1],
                   [1, 0, 0]])
+    
     C_world = np.array([[0, 0.5, 0]]).T
     t = -1 * np.matmul(R, C_world)
-    
+    """
     imSize = [1920, 1440]
     cam = Camera(K, R, t, imSize=imSize, id=6)
     return cam
@@ -425,7 +459,7 @@ def test_cam_back_project_plane():
     # ax.axis('equal')
     plt.title("image")
 
-    bird_eye_coordinates = np.array([[0, 60], [-20, 20]])
+    bird_eye_coordinates = np.array([[0, 40], [-15, 15]])
     far_pts = np.concatenate([bird_eye_coordinates, -2*np.ones((1,2))], axis=0)
     
     cam = camera_setup_6()
@@ -469,10 +503,11 @@ def main():
     # test_estimation(plane, pcd)
     # test_all_pcd()
     # test_cam_back_project()
+    test_cam_back_project_convex_hull()
     # test_bounding_box_in_image()
     # test_bounding_box_to_world()
     # test_estimation_combine_planes(plane, pcd)
-    test_cam_back_project_plane()
+    # test_cam_back_project_plane()
     
     
 
