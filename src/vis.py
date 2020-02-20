@@ -16,9 +16,9 @@ from geometry_msgs.msg import Point
 
 
 # functions
-def visualize_marker(point, mkr_id=0, frame_id="base_link", mkr_type="sphere", orientation = None, scale = 0.1, points = None):
+def visualize_marker(point, mkr_id=0, frame_id="base_link", mkr_type="sphere", orientation = None, scale = 1., points = None):
     """ create a marker 
-    
+
     Params:
         point: list of 3 coordinates
         mkr_id: unique int of marker id, default to 0, same will overwrite

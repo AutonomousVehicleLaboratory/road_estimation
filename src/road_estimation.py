@@ -105,8 +105,8 @@ def display_bboxes_in_world( camera, bboxes, ax1, ax2):
         d, C = camera.bounding_box_to_ray(bbox)
         intersection = plane.plane_ray_intersection(d, C)
         # print(intersection[0,0],'\t', intersection[1,0],'\t', intersection[2,0])
-        marker = visualize_marker(intersection, mkr_id=box_id, frame_id="velodyne")
-        vis_array.append(marker)
+        marker = visualize_marker(intersection, mkr_id=box_id, scale=1, frame_id="velodyne")
+        vis_array.markers.append(marker)
         xlist.append(intersection[0,0])
         ylist.append(intersection[1,0])
     """
@@ -180,7 +180,7 @@ def create_and_publish_plane_markers(plane):
                       mkr_type='cube', 
                       orientation=q, 
                       scale=[20,2,0.05])
-    marker_array.append(marker)
+    marker_array.markers.append(marker)
     return marker_array
 
 def test_cam_back_project_convex_hull():
@@ -192,7 +192,7 @@ def test_cam_back_project_convex_hull():
     
     d_vec, C_vec = cam.pixel_to_ray_vec(x)
     intersection_vec = plane.plane_ray_intersection_vec(d_vec, C_vec)
-    marker = visualize_marker([0,0,0], frame_id="velodyne", mkr_type="line_strip", points=intersection_vec.T)
+    marker = visualize_marker([0,0,0], frame_id="velodyne", mkr_type="line_strip", scale=0.1, points=intersection_vec.T)
     pub_convex_hull_markers.publish(marker)
 
 def pcd_callback(msg):
