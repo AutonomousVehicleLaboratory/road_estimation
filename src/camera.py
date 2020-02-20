@@ -10,7 +10,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import pyplot as plt
 from plane_3d import Plane3D
 from bounding_box import BoundingBox
-from utils import homogenize, dehomogenize
+from utils import homogenize, dehomogenize, parameterize_rotation
 
 # parameters
 
@@ -48,6 +48,22 @@ class Camera:
         
         return d, C
     
+    def pixel_to_ray_vec(self, pts):
+        """ given a pixel, calculate a line that all points will be projected to the pixel
+        through the camera
+        Params:
+            pts - 2 by n array, points in image coordinates
+        Return:
+            d - 3 by n array, direction vector for each pixel
+            C - 3 by 1 array, camera center in world frame, pencil of point representation.
+        """
+        pts_homo = homogenize(pts)
+        pts_norm = np.matmul( self.K_inv, pts_homo)
+        d = np.matmul(self.R.T, pts_norm)
+        d = d / np.sign(d[0,:]) / np.linalg.norm(d, axis=0)
+        C = self.C_world_inhomo
+        return d, C
+    
     def bounding_box_to_ray(self, bbox):
         Ix, Iy = bbox.bottom_point()
         d, C = self.pixel_to_ray(Ix, Iy, world=True)
@@ -76,8 +92,48 @@ def test_pixel_to_ray(cam):
     for i in range(x.shape[1]):
         d, C = cam.pixel_to_ray(x[0,i], x[1,i])
 
-# main
-def main():
+def camera_setup_6():
+    K = np.array([[1790.634474, 0., 973.099292],
+                  [0., 1785.950534, 803.294457],
+                  [0., 0., 1. ]])
+    """    
+    K = np.array([[7.070493000000e+02, 0.000000000000e+00, 6.040814000000e+02], 
+                  [0.000000000000e+00, 7.070493000000e+02, 1.805066000000e+02],
+                  [0.000000000000e+00, 0.000000000000e+00, 1.000000000000e+00]])
+    """
+    
+    Rt = np.array([[ -2.1022535018250471e-01, -9.2112145235168197e-02, 9.7330398891652492e-01, -1.4076865278184414e-02],
+                   [ -9.7735897207277012e-01, -4.6117027185500481e-03, -2.1153763709301088e-01, -3.1732881069183350e-01],
+                   [ 2.3973774202277975e-02, -9.9573795995643932e-01, -8.9057134763516621e-02, -7.2184838354587555e-02],
+                   [ 0., 0., 0., 1. ]])
+    R = Rt[0:3, 0:3].T
+    t = -np.matmul(R, Rt[0:3, 3:4])
+    """
+    R_c_to_o = np.array([[0., -1, 0],
+                  [0, 0, -1],
+                  [1, 0, 0]])
+    C_world = np.array([[0, 0.5, 0]]).T
+    t = -1 * np.matmul(R, C_world)
+    
+    R = np.matmul(R_c_to_o, R)
+    """
+    imSize = [1920, 1440]
+    cam = Camera(K, R, t, imSize=imSize, id=6)
+    return cam
+
+def test_camera_setup():
+    cam = camera_setup_6()
+    U, D, VT = np.linalg.svd(cam.P)
+    C_homo = VT.T[:,-1::]
+    C = C_homo[0:3] / C_homo[3,0]
+    print(np.matmul(cam.P, C_homo).T)
+    print("camera center:", C.T)
+    w, theta = parameterize_rotation(cam.R)
+    print(w.T, theta)
+    pass
+
+    
+def test_pixel_to_ray_plot():
     K = np.array([[7.070493000000e+02, 0.000000000000e+00, 6.040814000000e+02], 
                   [0.000000000000e+00, 7.070493000000e+02, 1.805066000000e+02],
                   [0.000000000000e+00, 0.000000000000e+00, 1.000000000000e+00]])
@@ -94,6 +150,10 @@ def main():
     cam.show_image(ax)
     plt.title("image")
     plt.show()
+# main
+
+def main():
+    test_camera_setup()
 
 
 if __name__ == "__main__":
