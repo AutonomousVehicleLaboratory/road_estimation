@@ -15,7 +15,7 @@ import numpy as np
 import sensor_msgs.point_cloud2 as pc2
 from sensor_msgs.msg import PointCloud2, PointField
 from visualization_msgs.msg import MarkerArray
-# from visualization_msgs.msg import Marker
+from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Quaternion
 
 from autoware_msgs.msg import DetectedObjectArray
@@ -42,6 +42,7 @@ np.set_printoptions(precision=3)
 global plane
 global pub_intersect_markers
 global pub_plane_markers
+global pub_convex_hull_markers
 # classes
 
 
@@ -76,14 +77,15 @@ def camera_setup_6():
                    [ -9.7735897207277012e-01, -4.6117027185500481e-03, -2.1153763709301088e-01, -3.1732881069183350e-01],
                    [ 2.3973774202277975e-02, -9.9573795995643932e-01, -8.9057134763516621e-02, -7.2184838354587555e-02],
                    [ 0., 0., 0., 1. ]])
-    R = Rt[0:3, 0:3]
-    t = Rt[0:3, 3:4]
+    R = Rt[0:3, 0:3].T
+    t = -np.matmul(R, Rt[0:3, 3:4])
     imSize = [1920, 1440]
     cam = Camera(K, R, t, imSize=imSize, id=6)
     return cam
 
 def display_bboxes_in_world( camera, bboxes, ax1, ax2):
     global plane, pub_intersect_markers
+    """
     ax1.cla()
     ax2.cla()
     Ixlist, Iylist = [], []
@@ -94,26 +96,29 @@ def display_bboxes_in_world( camera, bboxes, ax1, ax2):
         Iylist.append(Iy)
     ax1.scatter(Ixlist, Iylist)
     camera.show_image(ax1)
-
-    # plane = Plane3D(0., 0., 1, 2)
     
+    # plane = Plane3D(0., 0., 1, 2)
+    """
     vis_array = MarkerArray()
     xlist, ylist = [], []
-    for bbox in bboxes:
+    for box_id, bbox in enumerate(bboxes):
         d, C = camera.bounding_box_to_ray(bbox)
         intersection = plane.plane_ray_intersection(d, C)
         # print(intersection[0,0],'\t', intersection[1,0],'\t', intersection[2,0])
-        visualize_marker(intersection, vis_array, frame_id="velodyne")
+        marker = visualize_marker(intersection, mkr_id=box_id, frame_id="velodyne")
+        vis_array.append(marker)
         xlist.append(intersection[0,0])
         ylist.append(intersection[1,0])
+    """
     ax2.set_xlim([0, 80])
     ax2.set_ylim([-40, 40])
     ax2.scatter(xlist, ylist)
     plt.title("bird eye view")
     plt.suptitle("reproject bounding box to the world")
+    """
     pub_intersect_markers.publish(vis_array)
 
-    plt.pause(0.001)
+    # plt.pause(0.001)
 
 def bbox_array_callback(msg, args):
     camera, ax1, ax2 = args
@@ -170,17 +175,25 @@ def create_and_publish_plane_markers(plane):
     q_self = Quaternion_self.create_quaternion_from_vector_to_vector(v1, v2)
     q = Quaternion(q_self.x, q_self.y, q_self.z, q_self.w)
     marker_array = MarkerArray()
-    visualize_marker([10,0,(-plane.a * 10 - plane.d) / plane.c], marker_array, frame_id="velodyne", mkr_type='cube', orientation=q, scale=[20,2,0.05])
+    marker = visualize_marker([10,0,(-plane.a * 10 - plane.d) / plane.c], 
+                      frame_id="velodyne", 
+                      mkr_type='cube', 
+                      orientation=q, 
+                      scale=[20,2,0.05])
+    marker_array.append(marker)
     return marker_array
-    """
-    xx, yy = np.meshgrid(range(11), range(11))
-    z = (-plane.a * xx - plane.b * yy - plane.d) * 1. / plane.c
+
+def test_cam_back_project_convex_hull():
+    global plane, pub_convex_hull_markers
+    cam = camera_setup_6()
+
+    x = np.array([[400, 300, 1100, 1000, 400],
+                  [1150, 1200, 1200, 1150, 1150]])
     
-    for x, y, z in zip(xx, yy, z):
-        for xl, yl, zl in zip(x, y, z):
-            
-    
-    """
+    d_vec, C_vec = cam.pixel_to_ray_vec(x)
+    intersection_vec = plane.plane_ray_intersection_vec(d_vec, C_vec)
+    marker = visualize_marker([0,0,0], frame_id="velodyne", mkr_type="line_strip", points=intersection_vec.T)
+    pub_convex_hull_markers.publish(marker)
 
 def pcd_callback(msg):
     global plane, pub_plane_markers
@@ -195,11 +208,11 @@ def pcd_callback(msg):
     plane = estimate_plane(pcd)
     marker_array = create_and_publish_plane_markers(plane)
     pub_plane_markers.publish(marker_array)
-
+    test_cam_back_project_convex_hull()
 
 # main
 def main():
-    global pub_intersect_markers, pub_plane_markers
+    global pub_intersect_markers, pub_plane_markers, pub_convex_hull_markers
     rospy.init_node("road_estimation")
     
     fig = plt.figure(figsize=(16,8))
@@ -218,8 +231,10 @@ def main():
     # Publisher
     pub_intersect_markers = rospy.Publisher("/vision_objects_position_rviz", MarkerArray, queue_size=10)
     pub_plane_markers = rospy.Publisher("/estimated_plane_rviz", MarkerArray, queue_size=10)
-    #rospy.spin()
-    plt.show(block=True)
+    pub_convex_hull_markers = rospy.Publisher("/estimated_convex_hull_rviz", Marker, queue_size=10)
+
+    rospy.spin()
+    # plt.show(block=True)
 
 if __name__ == "__main__":
     main()
