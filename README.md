@@ -5,11 +5,14 @@ NOTE: data for point cloud is not uploaded since it is large.
 - [x] Get data from YOLO and our vehicle
 - [ ] check the synchronization
 - [x] test with real data
-- [ ] debug the projection (plane estimation is correct)
+- [x] debug the projection (plane estimation is correct) (turns out that Autoware define the extrinsic on another direction)
 - [x] Calibrate the lidar and camera
 - [x] combine two planes
 - [x] RANSAC based implementation of plane estimation tested.
 - [x] Implemented bin statistics, this can be used to evaluate the performance.
+- [ ] the markers are fluctuating a lot, needs stablization
+- [ ] plane fitting seems slow
+- [ ] plane fitting result constraints should happen, say nearly perpendicular to something
 And also form the basis of adaptive modeling.
 
 1. As said, the hyper parameter for ransac is very important.
