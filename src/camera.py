@@ -10,6 +10,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import pyplot as plt
 from plane_3d import Plane3D
 from bounding_box import BoundingBox
+from utils import homogenize, dehomogenize
 
 # parameters
 
@@ -21,10 +22,7 @@ class Camera:
         self.K = K
         self.R = R
         self.t = t
-        Rt = np.zeros([3,4])
-        Rt[0:3, 0:3] = R
-        Rt[0:3, 3:4] = t
-        self.P = np.matmul( K , Rt)             # camera projection matrix (world to image)
+        self.P = np.matmul(K, np.concatenate([R, t], axis=1)) # camera projection matrix (world to image)
         self.K_inv = np.linalg.inv(self.K)      # inverse of intrisic for convenience
         self.C_world_inhomo =np.matmul( - R.T , t)  # camera center in the world coordinate using inhomogeneous representation
         self.imSize = imSize                    # image size
@@ -62,7 +60,12 @@ class Camera:
             ax.set_xlim([0, self.imSize[0]])
             ax.set_ylim([0, self.imSize[1]])
             ax.invert_yaxis()
-
+    
+    def get_image_coordinate(self, X):
+        """ get the image coordinate of world point X """
+        x_homo = np.matmul(self.P, homogenize(X))
+        x = dehomogenize(x_homo)
+        return x
 
             
         
