@@ -6,6 +6,7 @@ Date:February 01, 2020
 
 
 # module
+from __future__ import absolute_import, division, print_function, unicode_literals
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import pyplot as plt
@@ -137,7 +138,7 @@ def test_estimation_single_plane(plane, pcd):
     pcd = pcd_close
 
     normal = vec1.reshape([-1,1]) / np.linalg.norm(vec1)
-    depth = (pcd.data.T @ normal).reshape([-1])
+    depth = np.matmul(pcd.data.T, normal).reshape([-1])
     distance = plane2.distance_to_plane(pcd.data.T)
     threshold_outer = 0.3
     threshold_inner = 0.1
@@ -179,7 +180,7 @@ def test_estimation(plane, pcd):
     planes.append(plane2)
 
     normal = vec1.reshape([-1,1]) / np.linalg.norm(vec1)
-    depth = (pcd_close.data.T @ normal).reshape([-1])
+    depth = np.matmul(pcd_close.data.T, normal).reshape([-1])
     distance = plane2.distance_to_plane(pcd_close.data.T)
     threshold_outer = 0.3
     threshold_inner = 0.1
@@ -229,7 +230,7 @@ def test_estimation_combine_planes(plane, pcd):
     planes.append(plane2)
 
     normal = vec1.reshape([-1,1]) / np.linalg.norm(vec1)
-    depth = (pcd_close.data.T @ normal).reshape([-1])
+    depth = np.matmul(pcd_close.data.T, normal).reshape([-1])
     distance = plane2.distance_to_plane(pcd_close.data.T)
     threshold_outer = 0.3
     threshold_inner = 0.1
@@ -305,7 +306,7 @@ def test_cam_back_project():
                   [0, 0, -1],
                   [1, 0, 0]])
     C_world = np.array([[0, 0.5, 0]]).T
-    t = -1 * R @ C_world
+    t = -1 * np.matmul(R, C_world)
     cam = Camera(K, R, t)
     x = np.array([[1, 1000, 1000, 1000, 1000, 1000, 800, 600, 400, 604],
               [1, 500, 400, 300, 200, 300, 300, 300, 300, 300]])
@@ -331,7 +332,7 @@ def test_bounding_box_in_image():
                   [0, 0, -1],
                   [1, 0, 0]])
     C_world = np.array([[0, 0.5, 0]]).T
-    t = -1 * R @ C_world
+    t = -1 * np.matmul(R, C_world)
     imSize = [1200, 400]
     cam = Camera(K, R, t, imSize=imSize)
     
@@ -364,7 +365,7 @@ def test_bounding_box_to_world():
                   [0, 0, -1],
                   [1, 0, 0]])
     C_world = np.array([[0, 0.5, 0]]).T
-    t = -1 * R @ C_world
+    t = -1 * np.matmul(R, C_world)
     imSize = [1200, 400]
     cam = Camera(K, R, t, imSize=imSize)
     cam.show_image(ax)
@@ -389,6 +390,73 @@ def test_bounding_box_to_world():
 
     plt.show()
 
+def camera_setup_6():
+    K = np.array([[1790.634474, 0., 973.099292],
+                  [0., 1785.950534, 803.294457],
+                  [0., 0., 1. ]])
+    """    
+    K = np.array([[7.070493000000e+02, 0.000000000000e+00, 6.040814000000e+02], 
+                  [0.000000000000e+00, 7.070493000000e+02, 1.805066000000e+02],
+                  [0.000000000000e+00, 0.000000000000e+00, 1.000000000000e+00]])
+    """
+    """
+    Rt = np.array([[ -2.1022535018250471e-01, -9.2112145235168197e-02, 9.7330398891652492e-01, -1.4076865278184414e-02],
+                   [ -9.7735897207277012e-01, -4.6117027185500481e-03, -2.1153763709301088e-01, -3.1732881069183350e-01],
+                   [ 2.3973774202277975e-02, -9.9573795995643932e-01, -8.9057134763516621e-02, -7.2184838354587555e-02],
+                   [ 0., 0., 0., 1. ]])
+    R = Rt[0:3, 0:3]
+    t = Rt[0:3, 3:4]
+    """
+    R = np.array([[0., -1, 0],
+                  [0, 0, -1],
+                  [1, 0, 0]])
+    C_world = np.array([[0, 0.5, 0]]).T
+    t = -1 * np.matmul(R, C_world)
+    
+    imSize = [1920, 1440]
+    cam = Camera(K, R, t, imSize=imSize, id=6)
+    return cam
+
+def test_cam_back_project_plane():
+    fig = plt.figure(figsize=(16,8))
+    spec = gridspec.GridSpec(2,3)
+
+    ax = fig.add_subplot(spec[0,0:2])
+    # ax.axis('equal')
+    plt.title("image")
+
+    bird_eye_coordinates = np.array([[0, 60], [-20, 20]])
+    far_pts = np.concatenate([bird_eye_coordinates, -2*np.ones((1,2))], axis=0)
+    
+    cam = camera_setup_6()
+    far_pts_image = cam.get_image_coordinate(far_pts)
+
+    x = np.array([[0, cam.imSize[0], 1, 1000, 1000, 1000, 1000, 1000, 800, 600, 400, 604],
+              [cam.imSize[1], cam.imSize[1], 1, 500, 400, 300, 200, 300, 300, 300, 300, 300]])
+    x[:,2::] = x[:,2::] + np.array([[0, 800 ]]).T
+    plane = Plane3D(0., 0., 1, 2)
+    
+    ax2 = fig.add_subplot(spec[1,:])
+    Ixlist, Iylist = [], []
+    xlist, ylist = [], []
+    for i in range(x.shape[1]):
+        d, C = cam.pixel_to_ray(x[0,i], x[1,i])
+        intersection = plane.plane_ray_intersection(d, C)
+        print(x[0,i],'\t', x[1,i],'\t', intersection[0,0],'\t', intersection[1,0],'\t', intersection[2,0])
+        xlist.append(intersection[0,0])
+        ylist.append(intersection[1,0])
+        Ixlist.append(x[0,i])
+        Iylist.append(x[1,i])
+    
+    ax2.set_xlim(bird_eye_coordinates[0])
+    ax2.set_ylim(bird_eye_coordinates[1])
+    cam.show_image(ax)
+    ax.scatter(Ixlist, Iylist)
+    ax2.scatter(xlist, ylist)
+    plt.title("bird eye view")
+    plt.suptitle("reproject bounding box to the world")
+    plt.show()
+
 # main
 def main():
     
@@ -403,7 +471,8 @@ def main():
     # test_cam_back_project()
     # test_bounding_box_in_image()
     # test_bounding_box_to_world()
-    test_estimation_combine_planes(plane, pcd)
+    # test_estimation_combine_planes(plane, pcd)
+    test_cam_back_project_plane()
     
     
 
