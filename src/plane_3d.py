@@ -147,6 +147,12 @@ class Plane3D:
         intersection = d*lam + C
         return intersection
 
+    def plane_ray_intersection_vec(self, d, C):
+        param = np.array([[self.a, self.b, self.c]])
+        k = (-self.d - np.matmul(param, C).item()) / np.matmul(param, d)
+        intersection = k * d + C
+        return intersection
+
     def vis(self, ax):
         if self.c != 0:
             xx, yy = np.meshgrid(range(11), range(11))
