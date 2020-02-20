@@ -16,7 +16,20 @@ from geometry_msgs.msg import Point
 
 
 # functions
-def visualize_marker(point, mkr_array = None, mkr_id=0, frame_id="base_link", mkr_type="sphere", orientation = None, scale = 0.1, points = None):
+def visualize_marker(point, mkr_id=0, frame_id="base_link", mkr_type="sphere", orientation = None, scale = 0.1, points = None):
+    """ create a marker 
+    
+    Params:
+        point: list of 3 coordinates
+        mkr_id: unique int of marker id, default to 0, same will overwrite
+        frame_id: str, frame, default to 'base_link'
+        mkr_type: str, default to 'sphere', can be 'cube', 'line_strip', 'arrow', 'triangle'
+        orientation: geometry_msgs.msg Quaternion
+        scale: int, float, or 3 list, specify the scale of each dimension, default to 0.1
+        points: n by 3 list if provided, default to None
+    Return:
+        constructed marker
+    """
     marker = Marker()
     marker.header.frame_id = frame_id.encode("ascii", "ignore")
     marker.header.stamp = rospy.get_rostime()
@@ -70,12 +83,9 @@ def visualize_marker(point, mkr_array = None, mkr_id=0, frame_id="base_link", mk
             pt.x = pti[0]
             pt.y = pti[1]
             pt.z = pti[2]
-            marker.points.append(pt)    
-
-    if mkr_array is None:
-        return marker
-    else:
-        mkr_array.markers.append(marker)
+            marker.points.append(pt)
+    
+    return marker
 
 # main
 def main():
