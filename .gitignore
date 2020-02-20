@@ -8,3 +8,4 @@
 !*.xml
 !CMakeLists.txt
 !*.msg
+py3/
