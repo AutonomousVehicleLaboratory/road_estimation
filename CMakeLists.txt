@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   message_generation
   autoware_msgs
+  shape_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -117,6 +118,7 @@ catkin_package(
     geometry_msgs
     cv_bridge
     autoware_msgs
+    shape_msgs
 #  DEPENDS system_lib
 )
 
