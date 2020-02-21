@@ -12,6 +12,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import pyplot as plt
 import matplotlib.colors as clr
 import matplotlib.gridspec as gridspec
+import cv2
 
 from read_file import read_points_data, read_points_raw
 from plane_3d import Plane3D
@@ -21,6 +22,7 @@ from point_cloud import PointCloud
 from camera import Camera
 from bounding_box import BoundingBox
 from utils import clip_pcd_by_distance_plane
+from semantic_convex_hull import generate_convex_hull
 
 np.set_printoptions(precision=3)
 
@@ -349,6 +351,46 @@ def test_cam_back_project_convex_hull():
     plt.suptitle("reproject bounding box to the world")
     plt.show()
 
+def test_generate_and_cam_back_project_convex_hull():
+
+    img = cv2.imread('/home/henry/Documents/projects/pylidarmot/src/vision_semantic_segmentation/network_output_example/preds/3118.jpg')
+
+    hull = generate_convex_hull(img)
+
+    fig = plt.figure(figsize=(16,12))
+    spec = gridspec.GridSpec(2,3)
+
+    ax = fig.add_subplot(spec[0,0:2])
+    plt.title("image")
+
+    bird_eye_coordinates = np.array([[0, 40], [-15, 15]])
+    far_pts = np.concatenate([bird_eye_coordinates, -2*np.ones((1,2))], axis=0)
+    
+    cam = camera_setup_6()
+    far_pts_image = cam.get_image_coordinate(far_pts)
+
+    x = hull
+    x[0,:] = x[0,:] * (cam.imSize[0] / img.shape[1])
+    x[1,:] = x[1,:] * (cam.imSize[1] / img.shape[0])
+
+    plane = Plane3D(0., 0., 1, 2)
+    
+    ax2 = fig.add_subplot(spec[1,:])
+    
+    plane = Plane3D(0., 0., 1, 2)
+    d_vec, C_vec = cam.pixel_to_ray_vec(x)
+    intersection_vec = plane.plane_ray_intersection_vec(d_vec, C_vec)
+    print(np.concatenate([x.T, intersection_vec.T], axis=1))
+    
+    ax2.set_xlim(bird_eye_coordinates[0])
+    ax2.set_ylim(bird_eye_coordinates[1])
+    cam.show_image(ax)
+    ax.scatter(x[0,:], x[1,:])
+    ax2.plot(intersection_vec[0,:], intersection_vec[1,:])
+    plt.title("bird eye view")
+    plt.suptitle("reproject bounding box to the world")
+    plt.show()
+
 def test_bounding_box_in_image():
     
     fig = plt.figure(figsize=(16,8))
@@ -503,7 +545,8 @@ def main():
     # test_estimation(plane, pcd)
     # test_all_pcd()
     # test_cam_back_project()
-    test_cam_back_project_convex_hull()
+    # test_cam_back_project_convex_hull()
+    test_generate_and_cam_back_project_convex_hull()
     # test_bounding_box_in_image()
     # test_bounding_box_to_world()
     # test_estimation_combine_planes(plane, pcd)
