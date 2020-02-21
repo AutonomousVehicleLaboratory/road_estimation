@@ -17,6 +17,7 @@ from sensor_msgs.msg import PointCloud2, PointField
 from visualization_msgs.msg import MarkerArray
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Quaternion
+from shape_msgs.msg import Plane
 
 from autoware_msgs.msg import DetectedObjectArray
 from autoware_msgs.msg import DetectedObject
@@ -40,6 +41,7 @@ np.set_printoptions(precision=3)
 
 # parameters
 global plane
+global pub_plane
 global pub_intersect_markers
 global pub_plane_markers
 global pub_convex_hull_markers
@@ -196,7 +198,7 @@ def test_cam_back_project_convex_hull():
     pub_convex_hull_markers.publish(marker)
 
 def pcd_callback(msg):
-    global plane, pub_plane_markers
+    global plane, pub_plane_markers, pub_plane
     print(msg.height, msg.width)
     pcd_original = np.empty((msg.width,3))
     for i, el in enumerate( pc2.read_points(msg, field_names = ("x", "y", "z"), skip_nans=True)):
@@ -207,12 +209,15 @@ def pcd_callback(msg):
     pcd = PointCloud(pcd_original.T)
     plane = estimate_plane(pcd)
     marker_array = create_and_publish_plane_markers(plane)
+    plane_msg = Plane()
+    plane_msg.coef[0], plane_msg.coef[1], plane_msg.coef[2], plane_msg.coef[3] = plane.a, plane.b, plane.c, plane.d
     pub_plane_markers.publish(marker_array)
+    pub_plane.publish(plane_msg)
     test_cam_back_project_convex_hull()
 
 # main
 def main():
-    global pub_intersect_markers, pub_plane_markers, pub_convex_hull_markers
+    global pub_intersect_markers, pub_plane_markers, pub_convex_hull_markers, pub_plane
     rospy.init_node("road_estimation")
     
     fig = plt.figure(figsize=(16,8))
@@ -232,6 +237,7 @@ def main():
     pub_intersect_markers = rospy.Publisher("/vision_objects_position_rviz", MarkerArray, queue_size=10)
     pub_plane_markers = rospy.Publisher("/estimated_plane_rviz", MarkerArray, queue_size=10)
     pub_convex_hull_markers = rospy.Publisher("/estimated_convex_hull_rviz", Marker, queue_size=10)
+    pub_plane = rospy.Publisher("/extimated_plane", Plane, queue_size = 10)
 
     rospy.spin()
     # plt.show(block=True)
