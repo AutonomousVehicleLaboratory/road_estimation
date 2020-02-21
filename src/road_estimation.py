@@ -44,7 +44,6 @@ global plane
 global pub_plane
 global pub_intersect_markers
 global pub_plane_markers
-global pub_convex_hull_markers
 # classes
 
 
@@ -185,18 +184,6 @@ def create_and_publish_plane_markers(plane):
     marker_array.markers.append(marker)
     return marker_array
 
-def test_cam_back_project_convex_hull():
-    global plane, pub_convex_hull_markers
-    cam = camera_setup_6()
-
-    x = np.array([[400, 300, 1100, 1000, 400],
-                  [1150, 1200, 1200, 1150, 1150]])
-    
-    d_vec, C_vec = cam.pixel_to_ray_vec(x)
-    intersection_vec = plane.plane_ray_intersection_vec(d_vec, C_vec)
-    marker = visualize_marker([0,0,0], frame_id="velodyne", mkr_type="line_strip", scale=0.1, points=intersection_vec.T)
-    pub_convex_hull_markers.publish(marker)
-
 def pcd_callback(msg):
     global plane, pub_plane_markers, pub_plane
     print(msg.height, msg.width)
@@ -213,11 +200,10 @@ def pcd_callback(msg):
     plane_msg.coef[0], plane_msg.coef[1], plane_msg.coef[2], plane_msg.coef[3] = plane.a, plane.b, plane.c, plane.d
     pub_plane_markers.publish(marker_array)
     pub_plane.publish(plane_msg)
-    test_cam_back_project_convex_hull()
 
 # main
 def main():
-    global pub_intersect_markers, pub_plane_markers, pub_convex_hull_markers, pub_plane
+    global pub_intersect_markers, pub_plane_markers, pub_plane
     rospy.init_node("road_estimation")
     
     fig = plt.figure(figsize=(16,8))
@@ -236,8 +222,7 @@ def main():
     # Publisher
     pub_intersect_markers = rospy.Publisher("/vision_objects_position_rviz", MarkerArray, queue_size=10)
     pub_plane_markers = rospy.Publisher("/estimated_plane_rviz", MarkerArray, queue_size=10)
-    pub_convex_hull_markers = rospy.Publisher("/estimated_convex_hull_rviz", Marker, queue_size=10)
-    pub_plane = rospy.Publisher("/extimated_plane", Plane, queue_size = 10)
+    pub_plane = rospy.Publisher("/estimated_plane", Plane, queue_size = 10)
 
     rospy.spin()
     # plt.show(block=True)
