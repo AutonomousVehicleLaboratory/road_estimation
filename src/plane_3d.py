@@ -152,6 +152,11 @@ class Plane3D:
         k = (-self.d - np.matmul(param, C).item()) / np.matmul(param, d)
         intersection = k * d + C
         return intersection
+    
+    def compute_z(self, xy):
+        # a, b, d,   [x, y, 1] = 
+        z = (np.matmul(np.array([[self.a, self.b]]) , xy) + self.d ) / -self.c
+        return z
 
     def vis(self, ax):
         if self.c != 0:
