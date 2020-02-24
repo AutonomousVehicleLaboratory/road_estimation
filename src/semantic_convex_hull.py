@@ -111,7 +111,7 @@ def generate_convex_hull(img, vis=False):
     
     return vertices.T
 
-def test_generate_convec_hull():
+def test_generate_convex_hull():
     import time
 
     img = cv2.imread('/home/henry/Documents/projects/pylidarmot/src/vision_semantic_segmentation/network_output_example/preds/3118.jpg')
@@ -122,7 +122,7 @@ def test_generate_convec_hull():
     print("running time: {:.6f}s".format(toc - tic))
 
 def main():
-    test_generate_convec_hull()
+    test_generate_convex_hull()
 
 if __name__ == "__main__":
     main()
