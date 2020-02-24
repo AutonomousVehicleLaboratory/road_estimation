@@ -86,6 +86,13 @@ class Camera:
             
         
 # functions
+
+def test_get_image_coordinate():
+    cam = camera_setup_6()
+    X = cam.C_world_inhomo + 10
+    x = cam.get_image_coordinate(X)
+    print(x)
+
 def test_pixel_to_ray(cam):
     x = np.array([[1, 500, 1000],
               [1, 200, 400]])
@@ -153,7 +160,8 @@ def test_pixel_to_ray_plot():
 # main
 
 def main():
-    test_camera_setup()
+    # test_camera_setup()
+    test_get_image_coordinate()
 
 
 if __name__ == "__main__":
