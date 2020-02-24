@@ -16,7 +16,7 @@ import numpy as np
 
 
 # functions
-def generate_homography(im_src, pts_src, pts_dst):
+def generate_homography(im_src, pts_src, pts_dst, vis=False):
     """ 
     https://www.learnopencv.com/homography-examples-using-opencv-python-c/
     """
@@ -36,13 +36,16 @@ def generate_homography(im_src, pts_src, pts_dst):
     # Warp source image to destination based on homography
     im_out = cv2.warpPerspective(im_src, h, (size_dst_max[0],size_dst_max[1])) #
     im_out = im_out[size_dst_min[1]::, size_dst_min[0]::]
+    if vis == True:
+        
+        # Display images
+        cv2.imshow("Source Image", im_src)
+        # cv2.imshow("Destination Image", im_dst)
+        cv2.imshow("Warped Source Image", im_out)
     
-    # Display images
-    cv2.imshow("Source Image", im_src)
-    # cv2.imshow("Destination Image", im_dst)
-    cv2.imshow("Warped Source Image", im_out)
- 
-    cv2.waitKey(0)
+        cv2.waitKey(0)
+
+    return im_out
 
 def test_generate_homography():
     # Read source image.
