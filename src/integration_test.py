@@ -562,7 +562,7 @@ def test_cam_back_project_homography():
 
     d_vec, C_vec = cam.pixel_to_ray_vec(pts_src)
     intersection_vec = plane.plane_ray_intersection_vec(d_vec, C_vec)
-    discretization_factor = 40 # pixels per meter
+    discretization_factor = 20 # pixels per meter
     xy_origin = np.array([[bird_eye_coordinates[0,0], bird_eye_coordinates[1,1]]]).T
     pts_dst = ((intersection_vec[0:2, :] - xy_origin ) * np.array([[1,-1]]).T * discretization_factor).astype(np.int64)
 
@@ -572,10 +572,10 @@ def test_cam_back_project_homography():
     # ax2.set_xlim( bird_eye_coordinates[0])
     # ax2.set_ylim( bird_eye_coordinates[1])
     cam.show_image( ax)
-    ax.scatter( pts_src[0,:], pts_src[1,:])
-    ax2.plot( pts_dst[0,:], pts_dst[1,:])
-    ax2.invert_yaxis()
-    # ax2.imshow(im_dst)
+    ax.plot( pts_src[0,:], pts_src[1,:])
+    # ax2.plot( pts_dst[0,:], pts_dst[1,:])
+    # ax2.invert_yaxis()
+    ax2.imshow(im_dst)
     plt.title( "bird eye view")
     plt.suptitle( "reproject bounding box to the world")
     plt.show()
