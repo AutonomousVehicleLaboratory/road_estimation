@@ -23,6 +23,7 @@ from camera import Camera
 from bounding_box import BoundingBox
 from utils import clip_pcd_by_distance_plane
 from semantic_convex_hull import generate_convex_hull
+from homography import generate_homography
 
 np.set_printoptions(precision=3)
 
@@ -337,7 +338,6 @@ def test_cam_back_project_convex_hull():
     
     ax2 = fig.add_subplot(spec[1,:])
     
-    plane = Plane3D(0., 0., 1, 2)
     d_vec, C_vec = cam.pixel_to_ray_vec(x)
     intersection_vec = plane.plane_ray_intersection_vec(d_vec, C_vec)
     print(np.concatenate([x.T, intersection_vec.T], axis=1))
@@ -377,7 +377,6 @@ def test_generate_and_cam_back_project_convex_hull():
     
     ax2 = fig.add_subplot(spec[1,:])
     
-    plane = Plane3D(0., 0., 1, 2)
     d_vec, C_vec = cam.pixel_to_ray_vec(x)
     intersection_vec = plane.plane_ray_intersection_vec(d_vec, C_vec)
     print(np.concatenate([x.T, intersection_vec.T], axis=1))
@@ -498,7 +497,6 @@ def test_cam_back_project_plane():
     spec = gridspec.GridSpec(2,3)
 
     ax = fig.add_subplot(spec[0,0:2])
-    # ax.axis('equal')
     plt.title("image")
 
     bird_eye_coordinates = np.array([[0, 40], [-15, 15]])
@@ -533,6 +531,55 @@ def test_cam_back_project_plane():
     plt.suptitle("reproject bounding box to the world")
     plt.show()
 
+def test_cam_back_project_homography():
+    cam = camera_setup_6()
+    
+    img = cv2.imread('/home/henry/Documents/projects/pylidarmot/src/vision_semantic_segmentation/network_output_example/preds/3118.jpg')
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    im_src = cv2.resize(img, (cam.imSize[0], cam.imSize[1]), interpolation=cv2.INTER_NEAREST)
+
+    fig = plt.figure(figsize=(16,12))
+    spec = gridspec.GridSpec(2,3)
+
+    ax = fig.add_subplot(spec[0,0:2])
+    plt.title("image")
+
+    bird_eye_coordinates = np.array([[0, 40], [-15, 15]])
+    plane = Plane3D(-0.158, -0.003, 0.987, 1.96)
+    
+    far_pts_xy = np.array(bird_eye_coordinates)
+    far_pts_xy[0,0] = far_pts_xy[0,1]
+    far_pts_xy[1,1] = 0
+    far_pts_z = plane.compute_z(far_pts_xy)
+    far_pts = np.vstack([far_pts_xy, far_pts_z])
+    
+    far_pts_image = cam.get_image_coordinate(far_pts)
+
+    pts_src = np.array([
+        [0,             cam.imSize[0], far_pts_image[0,0], far_pts_image[0,1]],
+        [cam.imSize[1], cam.imSize[1], far_pts_image[1,0], far_pts_image[1,1]]
+    ])
+
+    d_vec, C_vec = cam.pixel_to_ray_vec(pts_src)
+    intersection_vec = plane.plane_ray_intersection_vec(d_vec, C_vec)
+    discretization_factor = 40 # pixels per meter
+    xy_origin = np.array([[bird_eye_coordinates[0,0], bird_eye_coordinates[1,1]]]).T
+    pts_dst = ((intersection_vec[0:2, :] - xy_origin ) * np.array([[1,-1]]).T * discretization_factor).astype(np.int64)
+
+    im_dst = generate_homography(im_src, pts_src.T, pts_dst.T, vis=True)
+
+    ax2 = fig.add_subplot( spec[1,:])
+    # ax2.set_xlim( bird_eye_coordinates[0])
+    # ax2.set_ylim( bird_eye_coordinates[1])
+    cam.show_image( ax)
+    ax.scatter( pts_src[0,:], pts_src[1,:])
+    ax2.plot( pts_dst[0,:], pts_dst[1,:])
+    ax2.invert_yaxis()
+    # ax2.imshow(im_dst)
+    plt.title( "bird eye view")
+    plt.suptitle( "reproject bounding box to the world")
+    plt.show()
+
 # main
 def main():
     
@@ -545,12 +592,13 @@ def main():
     # test_estimation(plane, pcd)
     # test_all_pcd()
     # test_cam_back_project()
+    # test_cam_back_project_plane()
     # test_cam_back_project_convex_hull()
-    test_generate_and_cam_back_project_convex_hull()
+    # test_generate_and_cam_back_project_convex_hull()
     # test_bounding_box_in_image()
     # test_bounding_box_to_world()
     # test_estimation_combine_planes(plane, pcd)
-    # test_cam_back_project_plane()
+    test_cam_back_project_homography()
     
     
 
