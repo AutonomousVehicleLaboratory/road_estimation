@@ -30,7 +30,7 @@ def generate_homography(im_src, pts_src, pts_dst, vis=False):
     shape_pts_dst = shape_pts_dst / shape_pts_dst[2,:]
     size_dst_max = (np.max(shape_pts_dst, axis=1)).astype(np.int) #  - 
     size_dst_min = (np.min(shape_pts_dst, axis=1)).astype(np.int)
-    if np.min(size_dst_min<0):
+    if np.min(size_dst_min) < 0:
         raise NotImplementedError
 
     # Warp source image to destination based on homography
