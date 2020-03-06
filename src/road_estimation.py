@@ -32,7 +32,7 @@ from plane_3d import Plane3D
 from point_cloud import PointCloud
 from rotation import Quaternion as Quaternion_self
 from ransac import RANSAC
-from camera import Camera
+from camera import camera_setup_1, camera_setup_6
 from bounding_box import BoundingBox
 from utils import clip_pcd_by_distance_plane
 from vis import visualize_marker
@@ -48,41 +48,6 @@ global pub_plane_markers
 
 
 # functions
-def camera_setup_1():
-    K = np.array([[1826.998004, 0., 1174.548672],
-                  [0., 1802.603136, 776.028597],
-                  [0., 0., 1. ]])
-    """K = np.array([[7.070493000000e+02, 0.000000000000e+00, 6.040814000000e+02], 
-                  [0.000000000000e+00, 7.070493000000e+02, 1.805066000000e+02],
-                  [0.000000000000e+00, 0.000000000000e+00, 1.000000000000e+00]])
-    """
-    R = np.array([[0., -1, 0],
-                  [0, 0, -1],
-                  [1, 0, 0]])
-    C_world = np.array([[0, 0.5, 0]]).T
-    t = np.matmul(-1 * R , C_world)
-    imSize = [1920, 1440]
-    cam = Camera(K, R, t, imSize=imSize, id=1)
-    return cam 
-
-def camera_setup_6():
-    K = np.array([[1790.634474, 0., 973.099292],
-                  [0., 1785.950534, 803.294457],
-                  [0., 0., 1. ]])
-    """    
-    K = np.array([[7.070493000000e+02, 0.000000000000e+00, 6.040814000000e+02], 
-                  [0.000000000000e+00, 7.070493000000e+02, 1.805066000000e+02],
-                  [0.000000000000e+00, 0.000000000000e+00, 1.000000000000e+00]])
-    """
-    Rt = np.array([[ -2.1022535018250471e-01, -9.2112145235168197e-02, 9.7330398891652492e-01, -1.4076865278184414e-02],
-                   [ -9.7735897207277012e-01, -4.6117027185500481e-03, -2.1153763709301088e-01, -3.1732881069183350e-01],
-                   [ 2.3973774202277975e-02, -9.9573795995643932e-01, -8.9057134763516621e-02, -7.2184838354587555e-02],
-                   [ 0., 0., 0., 1. ]])
-    R = Rt[0:3, 0:3].T
-    t = -np.matmul(R, Rt[0:3, 3:4])
-    imSize = [1920, 1440]
-    cam = Camera(K, R, t, imSize=imSize, id=6)
-    return cam
 
 def display_bboxes_in_world( camera, bboxes, ax1, ax2):
     global plane, pub_intersect_markers
@@ -180,7 +145,8 @@ def create_and_publish_plane_markers(plane):
                       frame_id="velodyne", 
                       mkr_type='cube', 
                       orientation=q, 
-                      scale=[20,2,0.05])
+                      scale=[20,2,0.05],
+                       mkr_color = [0.0, 0.8, 0.0, 0.8])
     marker_array.markers.append(marker)
     return marker_array
 
