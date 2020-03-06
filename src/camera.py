@@ -17,15 +17,29 @@ from utils import homogenize, dehomogenize, parameterize_rotation
 
 # classes
 class Camera:
-    def __init__(self, K, R, t, imSize = None, id=0):
+    def __init__(self, K, R, t, imSize = None, id=0, dist=None):
+        """ setup camera
+
+        Params
+            K - 3 by 3 array, camera intrinsic matrix
+            R - 3 by 3 array, camera extrinsic rotation
+            t - 3 by 1 array, camera extrinsic translation
+            imSize=None - a list of two numbers, image size [width, height]
+            id=0 - integer, camera id
+            dist=None - a list of five numbers, distortion factor.
+        """
         self.id = id
         self.K = K
         self.R = R
         self.t = t
-        self.P = np.matmul(K, np.concatenate([R, t], axis=1)) # camera projection matrix (world to image)
+        self.P_norm = np.concatenate([R, t], axis=1)
+        self.P = np.matmul(K, self.P_norm) # camera projection matrix (world to image)
+        self.T = np.vstack([self.P_norm, np.zeros((1, self.P_norm.shape[1]))])
+        self.T[-1,-1] = 1
         self.K_inv = np.linalg.inv(self.K)      # inverse of intrisic for convenience
         self.C_world_inhomo =np.matmul( - R.T , t)  # camera center in the world coordinate using inhomogeneous representation
         self.imSize = imSize                    # image size
+        self.dist = dist                        # distortion factor
 
     def pixel_to_ray(self, Ix, Iy, world=True):
         """ given a pixel, calculate a line that all points will be projected to the pixel
@@ -86,7 +100,6 @@ class Camera:
             
         
 # functions
-
 def test_get_image_coordinate():
     cam = camera_setup_6()
     X = cam.C_world_inhomo + 10
@@ -99,15 +112,29 @@ def test_pixel_to_ray(cam):
     for i in range(x.shape[1]):
         d, C = cam.pixel_to_ray(x[0,i], x[1,i])
 
+def camera_setup_1():
+    """ return the avl camera1 object """
+    K = np.array([[1826.998004,    0.000000, 1174.548672],
+                  [0.000000,    1802.603136,  776.028597],
+                  [0.000000,       0.000000,    1.000000]])
+    
+    Rt = np.array([[ 1.5426360183850896e-01, -6.8597082105982421e-02,  9.8564556584725482e-01,  4.7539938241243362e-02],
+                   [-9.8802970661938061e-01, -1.0912135033489312e-02,  1.5387730224640517e-01,  3.1389930844306946e-01],
+                   [ 1.9996357324159053e-04, -9.9758476614047986e-01, -6.9459300162133530e-02, -5.5608768016099930e-02],
+                   [0., 0., 0., 1. ]])
+    R = Rt[0:3, 0:3].T
+    t = -np.matmul(R, Rt[0:3, 3:4])
+
+    imSize = [1920, 1440]
+    dist = np.array([-0.136981, 0.043159, 0.006235, 0.018954, 0.000000])
+    cam = Camera(K, R, t, imSize=imSize, id=1, dist=dist)
+    return cam
+
 def camera_setup_6():
+    """ return the avl camera6 object """
     K = np.array([[1790.634474, 0., 973.099292],
                   [0., 1785.950534, 803.294457],
                   [0., 0., 1. ]])
-    """    
-    K = np.array([[7.070493000000e+02, 0.000000000000e+00, 6.040814000000e+02], 
-                  [0.000000000000e+00, 7.070493000000e+02, 1.805066000000e+02],
-                  [0.000000000000e+00, 0.000000000000e+00, 1.000000000000e+00]])
-    """
     
     Rt = np.array([[ -2.1022535018250471e-01, -9.2112145235168197e-02, 9.7330398891652492e-01, -1.4076865278184414e-02],
                    [ -9.7735897207277012e-01, -4.6117027185500481e-03, -2.1153763709301088e-01, -3.1732881069183350e-01],
@@ -115,17 +142,10 @@ def camera_setup_6():
                    [ 0., 0., 0., 1. ]])
     R = Rt[0:3, 0:3].T
     t = -np.matmul(R, Rt[0:3, 3:4])
-    """
-    R_c_to_o = np.array([[0., -1, 0],
-                  [0, 0, -1],
-                  [1, 0, 0]])
-    C_world = np.array([[0, 0.5, 0]]).T
-    t = -1 * np.matmul(R, C_world)
-    
-    R = np.matmul(R_c_to_o, R)
-    """
+
     imSize = [1920, 1440]
-    cam = Camera(K, R, t, imSize=imSize, id=6)
+    dist = np.array([-0.191070, 0.100324, 0.004250, -0.003317, 0.000000])
+    cam = Camera(K, R, t, imSize=imSize, id=6, dist=dist)
     return cam
 
 def test_camera_setup():
@@ -160,7 +180,7 @@ def test_pixel_to_ray_plot():
 # main
 
 def main():
-    # test_camera_setup()
+    test_camera_setup()
     test_get_image_coordinate()
 
 
