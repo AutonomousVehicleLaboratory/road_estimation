@@ -29,7 +29,7 @@ class RANSAC:
         self.iteration = iteration
         self.method = method
 
-    def ransac(self, data, ax=None, weight = None):
+    def ransac(self, data, ax=None, weight = None, constraint = None, constraint_threshold = None):
         ctr = 0
         cost_best = np.inf
         model_best = None
@@ -38,7 +38,12 @@ class RANSAC:
             idx = self.non_repeat_index(0, data.shape[0], sample_num)
             subset = data[idx, :]
             model = self.model.fit(subset, method="min", weight=weight)
-            cost = self.eval(model, data)
+            if constraint is None:
+                cost = self.eval(model, data)
+            elif self.model.satisfy_constraint(model, constraint, constraint_threshold):
+                cost = self.eval(model, data)
+            else:
+                cost = np.inf
             if cost < cost_best:
                 model_best = deepcopy(model) # BUG NOTE: this mistake happens again!!!
                 cost_best = cost
@@ -51,6 +56,7 @@ class RANSAC:
             # jump out condition
             ctr += 1
         cost_best = self.eval(model_best, data)
+        self.model.satisfy_constraint(model_best, constraint, constraint_threshold, debug=True)
         return model_best, cost_best, self.inlier, self.outlier
     
     def eval(self, model, data):
