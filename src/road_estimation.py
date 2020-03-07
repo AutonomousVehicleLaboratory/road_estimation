@@ -41,6 +41,7 @@ np.set_printoptions(precision=3)
 
 # parameters
 global plane
+plane = Plane3D(-0.157, 0, 0.988, 1.9)
 global pub_plane
 global pub_intersect_markers
 global pub_plane_markers
@@ -99,13 +100,14 @@ def bbox_array_callback(msg, args):
         display_bboxes_in_world(camera, bboxes, ax1, ax2)
 
 def estimate_plane(pcd):
-    sac = RANSAC(Plane3D, min_sample_num=3, threshold=0.22, iteration=50, method="MSAC")
+    global plane
+    sac = RANSAC(Plane3D, min_sample_num=3, threshold=0.22, iteration=200, method="MSAC")
     vec1 = np.array([1,0,0])
     vec2 = np.array([0,0,1])
     pt1 = np.array([0,0,0])
     threshold = [6.0, -3.0]
     pcd_close, _ = clip_pcd_by_distance_plane(pcd, vec1, vec2, pt1, threshold)
-    plane1, _, _, _ = sac.ransac(pcd_close.data.T)
+    plane1, _, _, _ = sac.ransac(pcd_close.data.T, constraint=plane.param, constraint_threshold=0.5)
     # vis(plane1, pcd, dim_2d=True)
 
     normal = vec1.reshape([-1,1]) / np.linalg.norm(vec1)
@@ -152,7 +154,7 @@ def create_and_publish_plane_markers(plane):
 
 def pcd_callback(msg):
     global plane, pub_plane_markers, pub_plane
-    print(msg.height, msg.width)
+    rospy.logwarn("pcd height:%d, width:%d", msg.height, msg.width)
     pcd_original = np.empty((msg.width,3))
     for i, el in enumerate( pc2.read_points(msg, field_names = ("x", "y", "z"), skip_nans=True)):
         pcd_original[i,:] = el
@@ -166,6 +168,7 @@ def pcd_callback(msg):
     plane_msg.coef[0], plane_msg.coef[1], plane_msg.coef[2], plane_msg.coef[3] = plane.a, plane.b, plane.c, plane.d
     pub_plane_markers.publish(marker_array)
     pub_plane.publish(plane_msg)
+    rospy.logwarn("Finished plane estimation")
 
 # main
 def main():
