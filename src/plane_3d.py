@@ -9,7 +9,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
-
+from rotation import create_euler_from_vectors
 
 # parameters
 
@@ -114,6 +114,27 @@ class Plane3D:
             self.a, self.c = np.cos(theta_2)*norm, np.sin(theta_2)*norm
         
         self.param = np.array([[self.a, self.b, self.c, self.d]]).T
+    
+    @classmethod
+    def satisfy_constraint(cls, model, constraint, constraint_threshold, debug=False):
+        """ check if the plane normal is almost parralel to the given constraint, up to the threshold"""
+        assert(constraint.shape==(4,1))
+        assert(constraint_threshold <= 1.0)
+        norm_c = constraint[0:3] / np.linalg.norm(constraint[0:3])
+        # inner = np.matmul(model.param[0:3].T, norm_c).item()
+        euler_tf = create_euler_from_vectors(norm_c, model.param[0:3])
+        max_delta = np.max(np.abs(euler_tf * 180 / np.pi))
+        if debug:
+            # print(norm_c.T, model.param[0:3].T)
+            # print(inner, constraint_threshold)
+            # print((model.param[0:3].T - norm_c.T), model.param[0:3].T)
+            # euler = create_euler_from_vectors(np.array([[0.0, 0.0, 1.0]]).T, model.param[0:3])
+            # print("euler:", euler.T * 180 / np.pi)
+            print("euler_tf:", euler_tf.T * 180 / np.pi)
+        if max_delta > constraint_threshold or np.abs(constraint[3] - model.param[3]) > 0.2:
+            return False
+        else:
+            return True
     
     def normal_angle_to_vector(self, vector):
         """ return the angle between the normal vector of the plane and another given vector
