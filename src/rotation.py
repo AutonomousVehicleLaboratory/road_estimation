@@ -7,10 +7,14 @@ Date:January 27, 2020
 # module
 import numpy as np
 
+from tf.transformations import euler_from_quaternion
+from geometry_msgs.msg import Quaternion as Quaternion_ros
+
 # parameters
 
 
 # classes
+
 
 class Quaternion:
     def __init__(self, x=0, y=0, z=0, w=1.0):
@@ -39,6 +43,24 @@ class Quaternion:
         q.normalize()
         return q
     
+    # @classmethod
+    # def to_ros_quaternion(cls, x, y, z, w):
+    #     q = Quaternion_ros()
+    #     q.x = x
+    #     q.y = y
+    #     q.z = z
+    #     q.w = w
+    #     return q
+    
+    def to_ros_quaternion(self):
+        q = Quaternion_ros()
+        q.x = self.x
+        q.y = self.y
+        q.z = self.z
+        q.w = self.w
+        return q
+
+
     def normalize(self):
         norm = np.sqrt(np.sum(np.array([self.x, self.y, self.z, self.w])**2))
         self.x /= norm
@@ -95,12 +117,24 @@ class Rotation:
     
 
 # functions
+
+def create_euler_from_vectors(v1, v2):
+    q = Quaternion.create_quaternion_from_vector_to_vector(v1, v2)
+    explicit_q = [q.x, q.y, q.z, q.w]
+    euler = euler_from_quaternion(explicit_q)
+    euler = np.array(euler).reshape(3,1)
+    return euler
+
+
 def test_vector_to_vector():
     v1 = np.array([[0, 0, 1]]).T
     v2 = np.array([[-0.5, 0, 1.732/2.0]]).T
     q = Quaternion.create_quaternion_from_vector_to_vector(v1, v2)
     rot = AxisAngle.create_axisangle_from_vector_to_vector(v1, v2)
     q2 = rot.to_quaternion()
+    explicit_q = [q.x, q.y, q.z, q.w]
+    euler = euler_from_quaternion(explicit_q)
+    euler = np.array(euler).reshape(3,1)
     pass
 
 def test_get_matrix():
