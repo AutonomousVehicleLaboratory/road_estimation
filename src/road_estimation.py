@@ -16,8 +16,9 @@ import sensor_msgs.point_cloud2 as pc2
 from sensor_msgs.msg import PointCloud2, PointField
 from visualization_msgs.msg import MarkerArray
 from visualization_msgs.msg import Marker
-from geometry_msgs.msg import Quaternion
+from geometry_msgs.msg import Quaternion, PoseStamped
 from shape_msgs.msg import Plane
+from tf.transformations import euler_from_quaternion
 
 from autoware_msgs.msg import DetectedObjectArray
 from autoware_msgs.msg import DetectedObject
@@ -104,12 +105,18 @@ def bbox_array_callback(msg, args):
 
 def estimate_plane(pcd):
     global plane
-    sac = RANSAC(Plane3D, min_sample_num=3, threshold=0.22, iteration=200, method="MSAC")
+
+    threshold_z = [0.5, -0.5]
+    pcd_z, _ = clip_pcd_by_distance_plane(pcd, plane, threshold_z)
+
     vec1 = np.array([1,0,0])
     vec2 = np.array([0,0,1])
     pt1 = np.array([0,0,0])
     threshold = [6.0, -3.0]
-    pcd_close, _ = clip_pcd_by_distance_plane(pcd, vec1, vec2, pt1, threshold)
+    plane_from_vec = Plane3D.create_plane_from_vectors_and_point(vec1, vec2, pt1)
+    pcd_close, _ = clip_pcd_by_distance_plane(pcd_z, plane_from_vec, threshold)
+    
+    sac = RANSAC(Plane3D, min_sample_num=3, threshold=0.22, iteration=200, method="MSAC")
     seed=0
     np.random.seed(seed)
     plane1, _, _, _ = sac.ransac(pcd_close.data.T, constraint=plane.param, constraint_threshold=0.5)
@@ -150,12 +157,14 @@ def create_and_publish_plane_markers(plane):
     v2 = np.array([[plane.a, plane.b, plane.c]]).T
     q_self = Quaternion_self.create_quaternion_from_vector_to_vector(v1, v2)
     q = Quaternion(q_self.x, q_self.y, q_self.z, q_self.w)
+    euler = np.array(euler_from_quaternion((q.x, q.y, q.z, q.w))) * 180 / np.pi
+    print("Euler: ", euler)
     marker_array = MarkerArray()
     marker = visualize_marker([10,0,(-plane.a * 10 - plane.d) / plane.c], 
                       frame_id="velodyne", 
                       mkr_type='cube', 
                       orientation=q, 
-                      scale=[20,2,0.05],
+                      scale=[20,10,0.05],
                        mkr_color = [0.0, 0.8, 0.0, 0.8])
     marker_array.markers.append(marker)
     return marker_array
@@ -184,6 +193,11 @@ def pcd_callback(msg):
 
     rospy.logwarn("Finished plane estimation")
 
+def pose_callback(msg):
+    rospy.logdebug("Getting pose at: %d.%09ds", msg.header.stamp.secs, msg.header.stamp.nsecs)
+    print("Pose: position:", msg.pose.position.x, msg.pose.position.y, msg.pose.position.z)
+    print("Pose: orientation:", msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w )    
+    
 # main
 def main():
     global pub_intersect_markers, pub_plane_markers, pub_plane, pub_pcd_inlier, pub_pcd_outlier
@@ -201,6 +215,7 @@ def main():
     sub_bbox_1 = rospy.Subscriber("camera1/detection/vision_objects", DetectedObjectArray, bbox_array_callback, [cam1, ax1, ax2])
     sub_bbox_6 = rospy.Subscriber("camera6/detection/vision_objects", DetectedObjectArray, bbox_array_callback, [cam6, ax1, ax2])
     sub_pcd = rospy.Subscriber("/points_raw", PointCloud2, pcd_callback)
+    sub_pose = rospy.Subscriber("/current_pose", PoseStamped, pose_callback)
 
     # Publisher
     pub_intersect_markers = rospy.Publisher("/vision_objects_position_rviz", MarkerArray, queue_size=10)
