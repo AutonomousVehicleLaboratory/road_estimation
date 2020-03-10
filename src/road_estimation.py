@@ -8,6 +8,7 @@ Date:February 11, 2020
 # module
 from __future__ import absolute_import, division, print_function, unicode_literals
 import rospy
+import time
 import numpy as np
 # import cv2
 # from cv_bridge import CvBridge, CvBridgeError
@@ -18,6 +19,7 @@ from visualization_msgs.msg import MarkerArray
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Quaternion, PoseStamped
 from shape_msgs.msg import Plane
+from tf import Transformer, TransformListener, TransformerROS
 from tf.transformations import euler_from_quaternion
 
 from autoware_msgs.msg import DetectedObjectArray
@@ -36,14 +38,32 @@ from ransac import RANSAC
 from camera import camera_setup_1, camera_setup_6
 from bounding_box import BoundingBox
 from utils import clip_pcd_by_distance_plane
-from utils_ros import create_point_cloud
+from utils_ros import create_point_cloud, get_transformation, pointcloud2_to_xyz_array
 from vis import visualize_marker
+import cProfile, pstats, io
 
 np.set_printoptions(precision=3)
 
 # parameters
 
 # classes
+
+# functions
+def profile(fnc):
+  """ A decorator that use cProfile to profile a function """
+  def inner(*args, **argv):
+    pr = cProfile.Profile()
+    pr.enable()
+    retval = fnc(*args, **argv)
+    pr.disable()
+    s = io.StringIO()
+    sortby = 'cumulative'
+    ps = pstats.Stats(pr).sort_stats(sortby)
+    ps.print_stats()
+    print(s.getvalue())
+    return retval
+
+  return inner
 
 class RoadEstimation:
     def __init__(self):
@@ -63,7 +83,11 @@ class RoadEstimation:
         self.cam1 = camera_setup_1()
         self.cam6 = camera_setup_6() 
         self.plane = Plane3D(-0.157, 0, 0.988, 1.9)
-        self.sac = RANSAC(Plane3D, min_sample_num=3, threshold=0.22, iteration=200, method="MSAC")
+        self.sac = RANSAC(Plane3D, min_sample_num=3, threshold=0.22, iteration=50, method="MSAC")
+
+        self.tf_listener = TransformListener()
+        self.tfmr = Transformer()
+        self.tf_ros = TransformerROS()
 
     def display_bboxes_in_world(self, cam, bboxes):
         vis_array = MarkerArray()
@@ -72,7 +96,7 @@ class RoadEstimation:
             d, C = cam.bounding_box_to_ray(bbox)
             intersection = self.plane.plane_ray_intersection(d, C)
             # print(intersection[0,0],'\t', intersection[1,0],'\t', intersection[2,0])
-            marker = visualize_marker(intersection, mkr_id=box_id, scale=1, frame_id="velodyne")
+            marker = visualize_marker(intersection, mkr_id=box_id, scale=0.5, frame_id="velodyne", mkr_color = [0.0, 0.8, 0.0, 1.0])
             vis_array.markers.append(marker)
             xlist.append(intersection[0,0])
             ylist.append(intersection[1,0])
@@ -100,7 +124,7 @@ class RoadEstimation:
         self.display_bboxes_in_world(cam, bboxes)
 
     def estimate_plane(self, pcd):
-        threshold_z = [0.5, -0.5]
+        threshold_z = [2.0, -0.5]
         pcd_z, _ = clip_pcd_by_distance_plane(pcd, self.plane, threshold_z)
 
         vec1 = np.array([1,0,0])
@@ -158,20 +182,29 @@ class RoadEstimation:
                         mkr_type='cube', 
                         orientation=q, 
                         scale=[20,10,0.05],
+                        lifetime=30,
                         mkr_color = [0.0, 0.8, 0.0, 0.8])
         marker_array.markers.append(marker)
         return marker_array
-
+    
+    @profile # profiling for analysis
     def pcd_callback(self, msg):
-        rospy.logwarn("pcd height:%d, width:%d", msg.height, msg.width)
-        pcd_original = np.empty((msg.width,3))
-        for i, el in enumerate( pc2.read_points(msg, field_names = ("x", "y", "z"), skip_nans=True)):
-            pcd_original[i,:] = el
+        tic = time.time()
+        rospy.logwarn("Getting pcd at: %d.%09ds, (%d,%d)", msg.header.stamp.secs, msg.header.stamp.nsecs, msg.height, msg.width)
+        # pcd_original = np.empty((msg.width,3))
+        # for i, el in enumerate( pc2.read_points(msg, skip_nans=True)):
+        #     pcd_original[i,:] = el[0], el[1], el[2]
+
+        pcd_original = pointcloud2_to_xyz_array(msg)
+
         # pcd_original = [ i for i in ]
         # print(type(pcd_original[0][0]))
         # print(len(pcd_original))
+        toc1 = time.time()
         pcd = PointCloud(pcd_original.T)
+        
         self.plane, pcd_inlier, pcd_outlier = self.estimate_plane(pcd)
+        toc2 = time.time()
         marker_array = self.create_and_publish_plane_markers(self.plane)
         plane_msg = Plane()
         plane_msg.coef[0], plane_msg.coef[1], plane_msg.coef[2], plane_msg.coef[3] = self.plane.a, self.plane.b, self.plane.c, self.plane.d
@@ -184,13 +217,20 @@ class RoadEstimation:
         self.pub_pcd_outlier.publish(pcd_msg_outlier)
 
         rospy.logwarn("Finished plane estimation")
+        toc3 = time.time()
+        rospy.logwarn("time elapse: %f, %f, %f", toc1-tic, toc2-toc1, toc3-toc2)
 
     def pose_callback(self, msg):
-        rospy.logdebug("Getting pose at: %d.%09ds", msg.header.stamp.secs, msg.header.stamp.nsecs)
-        print("Pose: position:", msg.pose.position.x, msg.pose.position.y, msg.pose.position.z)
-        print("Pose: orientation:", msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w )    
-    
+        rospy.logwarn("Getting pose at: %d.%09ds", msg.header.stamp.secs, msg.header.stamp.nsecs)
+        # print("Pose: position:", msg.pose.position.x, msg.pose.position.y, msg.pose.position.z)
+        # print("Pose: orientation:", msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w )    
+        # transform_matrix, trans, rot, euler = get_transformation( frame_from='/base_link', frame_to='/velodyne',
+        #                                                           time_from= rospy.Time(0), time_to=rospy.Time(0), static_frame='/world',
+        #                                                           tf_listener=self.tf_listener, tf_ros=self.tf_ros)
+        # print("baselink to localizer:", euler)
+
 # main
+
 def main():
     rospy.init_node("road_estimation")
 
