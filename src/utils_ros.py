@@ -27,6 +27,32 @@ from std_msgs.msg import Header
 
 pub = rospy.Publisher("point_cloud2", PointCloud2, queue_size=2)
 
+def xyz_array_to_pointcloud2(points, stamp=None, frame_id=None):
+    '''
+    Create a sensor_msgs.PointCloud2 from an array
+    of points.
+    '''
+    msg = PointCloud2()
+    if stamp:
+        msg.header.stamp = stamp
+    if frame_id:
+        msg.header.frame_id = frame_id
+    if len(points.shape) == 3:
+        msg.height = points.shape[1]
+        msg.width = points.shape[0]
+    else:
+        msg.height = 1
+        msg.width = len(points)
+    msg.fields = [
+        PointField('x', 0, PointField.FLOAT32, 1),
+        PointField('y', 4, PointField.FLOAT32, 1),
+        PointField('z', 8, PointField.FLOAT32, 1)]
+    msg.is_bigendian = False
+    msg.point_step = 12
+    msg.row_step = 12*points.shape[0]
+    msg.is_dense = int(np.isfinite(points).all())
+    msg.data = np.asarray(points, np.float32).tostring()
+    return msg
 
 def create_point_cloud(xyz, rgb=None, frame_id='world'):
     """ prepare point cloud 

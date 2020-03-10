@@ -9,7 +9,7 @@ import numpy as np
 
 from tf.transformations import euler_from_quaternion
 from geometry_msgs.msg import Quaternion as Quaternion_ros
-
+from utils import cross
 # parameters
 
 
@@ -23,7 +23,7 @@ class Quaternion:
         self.z = float(z)
         self.w = float(w)
         self.normalize()
-    
+
     @classmethod
     def create_quaternion_from_vector_to_vector(cls, v1, v2):
         """ from two direction vectors, create the quaternion 
@@ -35,7 +35,7 @@ class Quaternion:
             q: Quaternion class
         """
         q = cls()
-        direction = np.cross(v1.reshape([-1]), v2.reshape([-1]))
+        direction = cross(v1.reshape([-1]), v2.reshape([-1]))
         q.x = direction[0]
         q.y = direction[1]
         q.z = direction[2]
@@ -119,9 +119,17 @@ class Rotation:
 # functions
 
 def create_euler_from_vectors(v1, v2):
-    q = Quaternion.create_quaternion_from_vector_to_vector(v1, v2)
-    explicit_q = [q.x, q.y, q.z, q.w]
-    euler = euler_from_quaternion(explicit_q)
+    # q = Quaternion.create_quaternion_from_vector_to_vector(v1, v2)
+    v1 = v1.reshape(-1)
+    v2 = v2.reshape(-1)
+    direction = cross(v1, v2)
+    x = direction[0]
+    y = direction[1]
+    z = direction[2]
+    w = np.sqrt((v1[0]*v1[0]+v1[1]*v1[1]+v1[2]*v1[2]) * (v2[0]*v2[0]+v2[1]*v2[1]+v2[2]*v2[2])) + \
+        (v1[0]*v2[0] + v1[1]*v2[1] + v1[2]*v2[2])
+    # explicit_q = [q.x, q.y, q.z, q.w]
+    euler = euler_from_quaternion([x,y,z,w])
     euler = np.array(euler).reshape(3,1)
     return euler
 

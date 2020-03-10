@@ -99,6 +99,41 @@ class PointCloud:
 
 # functions
 
+def clip_pcd_by_distance_plane(pcd, plane, threshold, in_only=False):
+    """ given planes specified by two vectors and a point, threshold the point cloud
+    by signed distance
+
+    Param:
+        pcd: PointCloud type
+        plane: Plane3D type
+        threshold: (2,) list gives the [max, min] of signed distance to the plane
+        in_only: default to false, return both point cloud in and out.
+    Return:
+        pcd_close(, pcd_far): separated point cloud, return pcd_far if in_only is False"""
+    distance = plane.distance_to_plane_signed(pcd.data.T)
+    idx_close =  np.logical_and(distance<threshold[0], distance>threshold[1])
+    data_close = pcd.data[:,idx_close]
+    pcd_close = PointCloud(data_close)
+    if in_only:
+        return pcd_close
+    else:
+        idx_far = np.logical_or(distance>=threshold[0], distance<=threshold[1])
+        data_far = pcd.data[:,idx_far]
+        pcd_far = PointCloud(data_far)
+        return pcd_close, pcd_far
+
+def test_clip_pcd_by_distance_plane(pcd):
+    vec1 = np.array([1,0,0])
+    vec2 = np.array([0,0,1])
+    pt1 = np.array([0,0,0])
+    threshold = [6.0, -3]
+    plane = Plane3D.create_plane_from_vectors_and_point(vec1, vec2, pt1)
+    pcd_close, _ = clip_pcd_by_distance_plane(pcd, plane, threshold)
+    fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(111, projection="3d")
+    pcd_close.vis(ax)
+    # plt.show()
+
 
 # main
 def main():

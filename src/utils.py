@@ -9,9 +9,6 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import pyplot as plt
 
-from plane_3d import Plane3D
-from point_cloud import PointCloud
-
 # parameters
 
 
@@ -19,56 +16,6 @@ from point_cloud import PointCloud
 
 
 # functions
-# def clip_pcd_by_distance_plane(pcd, vec1, vec2, pt1, threshold):
-#     """ given planes specified by two vectors and a point, threshold the point cloud
-#     by signed distance
-
-#     Param:
-#         pcd: PointCloud type
-#         vec1, vec2, pt1: 3*1 arrays
-#         threshold: (2,) list gives the [max, min] of signed distance to the plane
-#     Return:
-#         pcd_close, pcd_far: separated point cloud."""
-    
-#     distance = plane.distance_to_plane_signed(pcd.data.T)
-#     idx_close =  np.logical_and(distance<threshold[0], distance>threshold[1])
-#     idx_far = np.logical_or(distance>=threshold[0], distance<=threshold[1])
-#     data_close = pcd.data[:,idx_close]
-#     data_far = pcd.data[:,idx_far]
-#     pcd_close = PointCloud(data_close)
-#     pcd_far = PointCloud(data_far)
-#     return pcd_close, pcd_far
-
-def clip_pcd_by_distance_plane(pcd, plane, threshold):
-    """ given planes specified by two vectors and a point, threshold the point cloud
-    by signed distance
-
-    Param:
-        pcd: PointCloud type
-        plane: Plane3D type
-        threshold: (2,) list gives the [max, min] of signed distance to the plane
-    Return:
-        pcd_close, pcd_far: separated point cloud."""
-    distance = plane.distance_to_plane_signed(pcd.data.T)
-    idx_close =  np.logical_and(distance<threshold[0], distance>threshold[1])
-    idx_far = np.logical_or(distance>=threshold[0], distance<=threshold[1])
-    data_close = pcd.data[:,idx_close]
-    data_far = pcd.data[:,idx_far]
-    pcd_close = PointCloud(data_close)
-    pcd_far = PointCloud(data_far)
-    return pcd_close, pcd_far
-
-def test_clip_pcd_by_distance_plane(pcd):
-    vec1 = np.array([1,0,0])
-    vec2 = np.array([0,0,1])
-    pt1 = np.array([0,0,0])
-    threshold = [6.0, -3]
-    plane = Plane3D.create_plane_from_vectors_and_point(vec1, vec2, pt1)
-    pcd_close, _ = clip_pcd_by_distance_plane(pcd, plane, threshold)
-    fig = plt.figure(figsize=(12, 12))
-    ax = fig.add_subplot(111, projection="3d")
-    pcd_close.vis(ax)
-    # plt.show()
 
 def homogenize(x):
     # converts points from inhomogeneous to homogeneous coordinates
@@ -160,6 +107,11 @@ def jacobian_vector_norm(v):
     assert(v.shape[1] == 1)
     J = 1. / np.linalg.norm(v) * v.T
     return J
+
+def cross(v1, v2):
+    assert(v1.shape == (3,))
+    assert(v2.shape == (3,))
+    return np.array([v1[1]*v2[2]-v2[1]*v1[2], v1[2]*v2[0]-v2[2]*v1[0], v1[0]*v2[1]-v2[0]*v1[1]])
 
 # main
 def main():
