@@ -82,6 +82,7 @@ class RoadEstimation:
         self.cam1 = camera_setup_1()
         self.cam6 = camera_setup_6() 
         self.plane = Plane3D(-0.157, 0, 0.988, 1.9)
+        self.plane_world = None
         self.sac = RANSAC(Plane3D, min_sample_num=3, threshold=0.22, iteration=200, method="MSAC")
 
         self.tf_listener = TransformListener()
@@ -170,16 +171,21 @@ class RoadEstimation:
         pcd_outlier = pcd_close.data[:,distance > threshold_inlier]
         return plane1, pcd_inlier, pcd_outlier
 
-    def create_and_publish_plane_markers(self, plane):
-        v1 = np.array([[0, 0, 1.0]]).T
+    def create_and_publish_plane_markers(self, plane, frame_id='velodyne', center=None, normal=None):
+        if normal is None:
+            v1 = np.array([[0, 0, 1.0]]).T
+        else:
+            v1 = normal
         v2 = np.array([[plane.a, plane.b, plane.c]]).T
         q_self = Quaternion_self.create_quaternion_from_vector_to_vector(v1, v2)
         q = Quaternion(q_self.x, q_self.y, q_self.z, q_self.w)
         euler = np.array(euler_from_quaternion((q.x, q.y, q.z, q.w))) * 180 / np.pi
         print("Euler: ", euler)
         marker_array = MarkerArray()
-        marker = visualize_marker([10,0,(-plane.a * 10 - plane.d) / plane.c], 
-                        frame_id="velodyne", 
+        if center is None:
+            center = [10,0,(-plane.a * 10 - plane.d) / plane.c]
+        marker = visualize_marker(center, 
+                        frame_id=frame_id, 
                         mkr_type='cube', 
                         orientation=q, 
                         scale=[20,10,0.05],
@@ -197,10 +203,23 @@ class RoadEstimation:
         pcd = PointCloud(pcd_original.T)
         
         self.plane, pcd_inlier, pcd_outlier = self.estimate_plane(pcd)
-        marker_array = self.create_and_publish_plane_markers(self.plane)
+        transform_matrix, trans, rot, euler = get_transformation( frame_from='/velodyne', frame_to='/world',
+                                                                  time_from= msg.header.stamp, time_to=msg.header.stamp, static_frame='/world',
+                                                                  tf_listener=self.tf_listener, tf_ros=self.tf_ros)
+        if not transform_matrix is None:
+            plane_world_param = np.matmul( np.linalg.inv(transform_matrix).T, np.array([[ self.plane.a, self.plane.b, self.plane.c, self.plane.d]]).T)
+            self.plane_world = Plane3D(plane_world_param[0,0], plane_world_param[1,0], plane_world_param[2,0], plane_world_param[3,0])
+            center_pos = np.matmul(transform_matrix, np.array([[10, 0, (-self.plane.a * 10 - self.plane.d) / self.plane.c, 1]]).T)
+            center_pos = center_pos[0:3].flatten()
+            # normal = np.matmul( transform_matrix, np.array([[0., 0., 1., 0.]]).T)
+            # normal = normal[0:3]
+            normal = None
+            marker_array = self.create_and_publish_plane_markers(self.plane_world, frame_id='world', center=center_pos, normal=normal)
+            self.pub_plane_markers.publish(marker_array)
+        
         plane_msg = Plane()
         plane_msg.coef[0], plane_msg.coef[1], plane_msg.coef[2], plane_msg.coef[3] = self.plane.a, self.plane.b, self.plane.c, self.plane.d
-        self.pub_plane_markers.publish(marker_array)
+        
         self.pub_plane.publish(plane_msg)
 
         # pcd_msg_inlier = create_point_cloud(pcd_inlier.T, frame_id='velodyne')
