@@ -39,6 +39,9 @@ from camera import camera_setup_1, camera_setup_6
 from bounding_box import BoundingBox
 from utils_ros import create_point_cloud, get_transformation, pointcloud2_to_xyz_array, xyz_array_to_pointcloud2
 from vis import visualize_marker
+from tracker import Tracker
+
+
 import cProfile, pstats, io
 
 np.set_printoptions(precision=3)
@@ -83,6 +86,7 @@ class RoadEstimation:
         self.cam6 = camera_setup_6() 
         self.plane = Plane3D(-0.157, 0, 0.988, 1.9)
         self.plane_world = None
+        self.plane_tracker = None
         self.sac = RANSAC(Plane3D, min_sample_num=3, threshold=0.22, iteration=200, method="MSAC")
 
         self.tf_listener = TransformListener()
@@ -208,7 +212,20 @@ class RoadEstimation:
                                                                   tf_listener=self.tf_listener, tf_ros=self.tf_ros)
         if not transform_matrix is None:
             plane_world_param = np.matmul( np.linalg.inv(transform_matrix).T, np.array([[ self.plane.a, self.plane.b, self.plane.c, self.plane.d]]).T)
-            self.plane_world = Plane3D(plane_world_param[0,0], plane_world_param[1,0], plane_world_param[2,0], plane_world_param[3,0])
+            plane_world_param = plane_world_param / np.linalg.norm(plane_world_param)
+            
+            if self.plane_tracker is None:
+                self.plane_tracker = Tracker(msg.header.stamp, plane_world_param)
+            else:
+                self.plane_tracker.update(plane_world_param)
+            print("plane_world:", plane_world_param.T)
+            print("plane_traker:", self.plane_tracker.filter.x_post.T)
+            
+            # self.plane_world = Plane3D(plane_world_param[0,0], plane_world_param[1,0], plane_world_param[2,0], plane_world_param[3,0])
+            self.plane_world = Plane3D(self.plane_tracker.filter.x_post[0,0], 
+                                       self.plane_tracker.filter.x_post[1,0], 
+                                       self.plane_tracker.filter.x_post[2,0], 
+                                       self.plane_tracker.filter.x_post[3,0])
             center_pos = np.matmul(transform_matrix, np.array([[10, 0, (-self.plane.a * 10 - self.plane.d) / self.plane.c, 1]]).T)
             center_pos = center_pos[0:3].flatten()
             # normal = np.matmul( transform_matrix, np.array([[0., 0., 1., 0.]]).T)
