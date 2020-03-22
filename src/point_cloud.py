@@ -75,6 +75,31 @@ class PointCloud:
                 # self.color[:,0:3] = 255
                 # self.color[distance>threshold,0] = 100
         pass
+
+    def extract_low(self, threshold = np.array([[-10, 50], [-3.0, 6.0]]), d = 1.0):
+        points_set = []
+        width = int((threshold[0,1] - threshold[0,0]) / d)
+        height = int((threshold[1,1] - threshold[1,0]) / d)
+        z_map = np.zeros((width, height))
+        z_map_count = np.zeros((width, height))
+        data_id = ((self.data[0:2] - threshold[:,0:1]) / d).astype(np.int)
+        mask = np.logical_and( np.logical_and(data_id[0] >= 0, data_id[0] < width), 
+                               np.logical_and(data_id[1] >= 0, data_id[1] < height))
+        pos_id = data_id[:,mask]
+        z_data = self.data[2, mask]
+        for i in range(width):
+            mask_i = pos_id[0] == i
+            for j in range(height):
+                id_mask = np.logical_and(mask_i, pos_id[1] == j)
+                z_ij = z_data[id_mask]
+                if len(z_ij) > 0:
+                    min_z = np.min(z_ij)
+                    z_map[i,j] = min_z
+                    points_set.append([d*i-threshold[0,0], d*j-threshold[1,0], min_z])
+                else:
+                    z_map[i,j] = -100
+        return PointCloud(np.array(points_set).T)
+
     
     def vis(self, ax, dim_2d=True, s=1, lim=[-20, 40, -18, 18], cmap = None, side=False):
         if dim_2d == True:
@@ -106,18 +131,18 @@ def clip_pcd_by_distance_plane(pcd, plane, threshold, in_only=False):
     Param:
         pcd: PointCloud type
         plane: Plane3D type
-        threshold: (2,) list gives the [max, min] of signed distance to the plane
+        threshold: (2,) list gives the [min, max] of signed distance to the plane
         in_only: default to false, return both point cloud in and out.
     Return:
         pcd_close(, pcd_far): separated point cloud, return pcd_far if in_only is False"""
     distance = plane.distance_to_plane_signed(pcd.data.T)
-    idx_close =  np.logical_and(distance<threshold[0], distance>threshold[1])
+    idx_close =  np.logical_and(distance<threshold[1], distance>threshold[0])
     data_close = pcd.data[:,idx_close]
     pcd_close = PointCloud(data_close)
     if in_only:
         return pcd_close
     else:
-        idx_far = np.logical_or(distance>=threshold[0], distance<=threshold[1])
+        idx_far = np.logical_or(distance>=threshold[1], distance<=threshold[0])
         data_far = pcd.data[:,idx_far]
         pcd_far = PointCloud(data_far)
         return pcd_close, pcd_far

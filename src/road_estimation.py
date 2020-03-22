@@ -70,7 +70,7 @@ class RoadEstimation:
         self.sub_bbox_1 = rospy.Subscriber("camera1/detection/vision_objects", DetectedObjectArray, self.bbox_array_callback)
         self.sub_bbox_6 = rospy.Subscriber("camera6/detection/vision_objects", DetectedObjectArray, self.bbox_array_callback)
         self.sub_pcd = rospy.Subscriber("/points_raw", PointCloud2, self.pcd_callback)
-        self.sub_pose = rospy.Subscriber("/current_pose", PoseStamped, self.pose_callback)
+        # self.sub_pose = rospy.Subscriber("/current_pose", PoseStamped, self.pose_callback)
 
         # Publisher
         self.pub_intersect_markers = rospy.Publisher("/vision_objects_position_rviz", MarkerArray, queue_size=10)
@@ -123,15 +123,17 @@ class RoadEstimation:
         self.display_bboxes_in_world(cam, bboxes)
 
     def estimate_plane(self, pcd):
-        threshold_z = [2.0, -0.5]
-        pcd_z = clip_pcd_by_distance_plane(pcd, self.plane, threshold_z, in_only=True)
+        # threshold_z = [2.0, -0.5]
+        # pcd_z = clip_pcd_by_distance_plane(pcd, self.plane, threshold_z, in_only=True)
 
         vec1 = np.array([1,0,0])
         vec2 = np.array([0,0,1])
         pt1 = np.array([0,0,0])
-        threshold = [6.0, -3.0]
+        threshold = [-3.0, 6.0]
         plane_from_vec = Plane3D.create_plane_from_vectors_and_point(vec1, vec2, pt1)
-        pcd_close = clip_pcd_by_distance_plane(pcd_z, plane_from_vec, threshold, in_only=True)
+        pcd_close = clip_pcd_by_distance_plane(pcd, plane_from_vec, threshold, in_only=True)
+
+        # pcd_close = pcd_close.extract_low()
         
         seed=0
         np.random.seed(seed)
@@ -186,7 +188,7 @@ class RoadEstimation:
         marker_array.markers.append(marker)
         return marker_array
     
-    @profile # profiling for analysis
+    # @profile # profiling for analysis
     def pcd_callback(self, msg):
         rospy.logwarn("Getting pcd at: %d.%09ds, (%d,%d)", msg.header.stamp.secs, msg.header.stamp.nsecs, msg.height, msg.width)
 
@@ -211,7 +213,7 @@ class RoadEstimation:
         rospy.logwarn("Finished plane estimation")
 
     def pose_callback(self, msg):
-        rospy.logwarn("Getting pose at: %d.%09ds", msg.header.stamp.secs, msg.header.stamp.nsecs)
+        rospy.logdebug("Getting pose at: %d.%09ds", msg.header.stamp.secs, msg.header.stamp.nsecs)
         # print("Pose: position:", msg.pose.position.x, msg.pose.position.y, msg.pose.position.z)
         # print("Pose: orientation:", msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w )    
         # transform_matrix, trans, rot, euler = get_transformation( frame_from='/base_link', frame_to='/velodyne',
