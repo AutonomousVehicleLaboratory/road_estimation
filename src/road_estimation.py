@@ -212,11 +212,12 @@ class RoadEstimation:
                                                                   tf_listener=self.tf_listener, tf_ros=self.tf_ros)
         if not transform_matrix is None:
             plane_world_param = np.matmul( np.linalg.inv(transform_matrix).T, np.array([[ self.plane.a, self.plane.b, self.plane.c, self.plane.d]]).T)
-            plane_world_param = plane_world_param / np.linalg.norm(plane_world_param)
+            plane_world_param = plane_world_param / np.linalg.norm(plane_world_param[0:3])
             
             if self.plane_tracker is None:
                 self.plane_tracker = Tracker(msg.header.stamp, plane_world_param)
             else:
+                self.plane_tracker.predict(msg.header.stamp)
                 self.plane_tracker.update(plane_world_param)
             print("plane_world:", plane_world_param.T)
             print("plane_traker:", self.plane_tracker.filter.x_post.T)

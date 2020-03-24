@@ -11,7 +11,7 @@ import numpy as np
 np.set_printoptions(precision=3)
 
 from kalman_filter import KalmanFilter
-
+from utils import gate_probability
 # parameters
 
 
@@ -45,7 +45,7 @@ class Tracker():
     self.update_time = time
     self.predict_time = time
     noise_observation = np.eye(observation.shape[0])
-    noise_process = np.zeros(observation.shape[0])
+    noise_process = np.eye(observation.shape[0])
     mtx_transition = np.eye(observation.shape[0])
     mtx_observation = np.eye(observation.shape[0])
     mtx_control = None
@@ -75,6 +75,10 @@ class Tracker():
                                 self.filter.innovation)
     self.update_time = self.predict_time
     self.observation = observation
+
+    # check probability
+    prob = gate_probability(self.filter.innovation, self.filter.innovation_cov)
+    print(prob, self.filter.innovation.T)
     
 # functions
 

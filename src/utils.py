@@ -8,6 +8,7 @@ Date:February 12, 2020
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import pyplot as plt
+from scipy.stats import norm
 
 # parameters
 
@@ -112,6 +113,18 @@ def cross(v1, v2):
     assert(v1.shape == (3,))
     assert(v2.shape == (3,))
     return np.array([v1[1]*v2[2]-v2[1]*v1[2], v1[2]*v2[0]-v2[2]*v1[0], v1[0]*v2[1]-v2[0]*v1[1]])
+
+def gate_probability(mean, cov):
+  mu = mean.flatten()
+  prob = 1
+  for i in range(len(mu)):
+    cdf = norm(0, cov[i,i]).cdf(mu[i])
+    if mu[i] > 0:
+      region = 2*(1-cdf)
+    else:
+      region = 2 * cdf
+    prob = prob * region
+  return prob
 
 # main
 def main():
