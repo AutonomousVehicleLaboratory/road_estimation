@@ -77,28 +77,25 @@ class PointCloud:
         pass
 
     def extract_low(self, threshold = np.array([[-10, 50], [-3.0, 6.0]]), d = 1.0):
-        points_set = []
+        data = self.data.T
         width = int((threshold[0,1] - threshold[0,0]) / d)
         height = int((threshold[1,1] - threshold[1,0]) / d)
-        z_map = np.zeros((width, height))
-        z_map_count = np.zeros((width, height))
-        data_id = ((self.data[0:2] - threshold[:,0:1]) / d).astype(np.int)
-        mask = np.logical_and( np.logical_and(data_id[0] >= 0, data_id[0] < width), 
-                               np.logical_and(data_id[1] >= 0, data_id[1] < height))
-        pos_id = data_id[:,mask]
-        z_data = self.data[2, mask]
-        for i in range(width):
-            mask_i = pos_id[0] == i
-            for j in range(height):
-                id_mask = np.logical_and(mask_i, pos_id[1] == j)
-                z_ij = z_data[id_mask]
-                if len(z_ij) > 0:
-                    min_z = np.min(z_ij)
-                    z_map[i,j] = min_z
-                    points_set.append([d*i-threshold[0,0], d*j-threshold[1,0], min_z])
-                else:
-                    z_map[i,j] = -100
-        return PointCloud(np.array(points_set).T)
+        idx = ((data[:,0] - threshold[0,0]) / d).astype(np.int)
+        idy = ((data[:,1] - threshold[1,0]) / d).astype(np.int)
+        xin = np.logical_and(0 <= idx, idx < width)
+        yin = np.logical_and(0 <= idy, idy < height)
+        zin = np.logical_and(xin, yin)
+        data_id = idx[zin] * height + idy[zin]
+        data_val = data[zin]
+        max_val = np.max(data_val) + 1
+        ans = np.ones((width*height, 3))*max_val
+        for i in range(data_val.shape[0]):
+            j = data_id[i]
+            if data_val[i,2] < ans[j,2]:
+                ans[j] = data_val[i]
+        id_valid = np.all(ans != max_val * np.array([[1.,1.,1.]]), axis=1)
+        data_low = ans[id_valid]
+        return PointCloud(data_low.T)
 
     
     def vis(self, ax, dim_2d=True, s=1, lim=[-20, 40, -18, 18], cmap = None, side=False):
@@ -123,6 +120,82 @@ class PointCloud:
 
 
 # functions
+
+# def reverse_xz(data):
+#     temp = np.array(data[:,2])
+#     data[:,2] = data[:,0]
+#     data[:,0] = temp
+#     return data
+
+# def reverse_xz_to_tuple_row(data):
+#     arr = np.empty(data.shape[0], dtype=tuple)
+#     arr[:] = map(tuple, data)
+#     return arr
+
+def extract_low(data, threshold = np.array([[-10, 50], [-3.0, 6.0]]), d = 1.0):
+    width = int((threshold[0,1] - threshold[0,0]) / d)
+    height = int((threshold[1,1] - threshold[1,0]) / d)
+    idx = ((data[:,0] - threshold[0,0]) / d).astype(np.int)
+    idy = ((data[:,1] - threshold[1,0]) / d).astype(np.int)
+    xin = np.logical_and(0 <= idx, idx < width)
+    yin = np.logical_and(0 <= idy, idy < height)
+    zin = np.logical_and(xin, yin)
+    data_id = idx[zin] * height + idy[zin]
+    data_val = data[zin]
+    # data_val = reverse_xz_to_tuple_row(data_val)
+    max_val = np.max(data_val) + 1
+    ans = np.ones((width*height, 3))*max_val
+    for i in range(data_val.shape[0]):
+        j = data_id[i]
+        if data_val[i,2] < ans[j,2]:
+            ans[j] = data_val[i]
+    # data_id = np.array([0,0,0,1,1,1,1,2,2,2,3,3,3,4,5,5,5])
+    # data_val = np.random.randint(0, 100, size=(len(data_id), 3))
+    # data_val = reverse_xz(data_val)
+    # ans = np.empty((data_id[-1]+1, 3)) # might want to use max(data_id) and zeros instead
+    # np.minimum.at(ans,data_id,data_val)
+    # ans = reverse_xz(ans)
+    id_valid = np.all(ans != max_val * np.array([[1.,1.,1.]]), axis=1)
+    data_low = ans[id_valid]
+    return data_low
+
+def test_extract_low():
+    import pickle, pptk
+    close = False
+    filename = "/home/henry/Documents/projects/pylidarmot/src/road_estimation/data/pcd.pkl"
+    with open(filename, 'rb') as fp:
+        pcd = pickle.load(fp)
+    # data = np.array([
+    #     [0, 1, 2, 3, 4, 5, 6],
+    #     [2, 3, 4, 3, 4, 5, 3],
+    #     [0, 1, 0, 1, 0, 1, 0]
+    # ]).T
+    # data = np.random.rand(1000, 3)
+    # data = data * np.array([[10, 9, 1]]) - np.array([[0, 3, 0]])
+    # pcd = PointCloud(data.T)
+    pcd, _ = pcd.clip_by_x([-10, 60])
+    vec1 = np.array([1,0,0])
+    vec2 = np.array([0,0,1])
+    pt1 = np.array([0,0,0])
+    threshold = [-3.0, 6.0]
+    plane_from_vec = Plane3D.create_plane_from_vectors_and_point(vec1, vec2, pt1)
+    pcd_close = clip_pcd_by_distance_plane(pcd, plane_from_vec, threshold, in_only=True)
+    
+    pcd_low = extract_low(pcd_close.data.T)
+    # pcd_low = np.zeros(pcd_low.shape)
+    vis_data = np.vstack([pcd_close.data.T, pcd_low])
+
+    attribute = np.ones(vis_data.shape).astype(np.float)
+    attribute[-pcd_low.shape[0]:-1, 1::] = 0 
+    v = pptk.viewer(vis_data)
+    v.attributes(attribute, vis_data[:,2]/ np.max(vis_data[:,2]))
+    v.set(point_size=0.01)
+    # pose = [20,10,-10,1,-np.pi/2,10]
+    # pose = [40,15,-40,-np.pi/6,-np.pi/3,5]
+    # v.play(pose, ts = [0], tlim=[0, 1], repeat=False)
+    if close:
+        time.sleep(1)
+        v.close()
 
 def clip_pcd_by_distance_plane(pcd, plane, threshold, in_only=False):
     """ given planes specified by two vectors and a point, threshold the point cloud
@@ -160,9 +233,10 @@ def test_clip_pcd_by_distance_plane(pcd):
     # plt.show()
 
 
+
 # main
 def main():
-    pass
+    test_extract_low()
 
 if __name__ == "__main__":
     main()

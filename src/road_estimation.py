@@ -130,7 +130,6 @@ class RoadEstimation:
     def estimate_plane(self, pcd):
         # threshold_z = [2.0, -0.5]
         # pcd_z = clip_pcd_by_distance_plane(pcd, self.plane, threshold_z, in_only=True)
-
         vec1 = np.array([1,0,0])
         vec2 = np.array([0,0,1])
         pt1 = np.array([0,0,0])
@@ -138,7 +137,7 @@ class RoadEstimation:
         plane_from_vec = Plane3D.create_plane_from_vectors_and_point(vec1, vec2, pt1)
         pcd_close = clip_pcd_by_distance_plane(pcd, plane_from_vec, threshold, in_only=True)
 
-        # pcd_close = pcd_close.extract_low()
+        pcd_close = pcd_close.extract_low()
         
         seed=0
         np.random.seed(seed)
