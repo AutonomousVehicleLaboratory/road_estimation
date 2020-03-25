@@ -5,6 +5,7 @@ Date:February 12, 2020
 """
 
 # module
+from __future__ import absolute_import, division, print_function, unicode_literals
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import pyplot as plt
@@ -17,6 +18,22 @@ from scipy.stats import norm
 
 
 # functions
+
+def print_arr_2d(arr):
+    print(" = np.array([")
+    for i in range(arr.shape[0]):
+        print("[ ", end="")
+        for j in range(arr.shape[1]):
+            if j == 0:
+                print(arr[i,j], end="")
+            else:
+                print(",", arr[i,j], end="")
+        if i != arr.shape[0]-1:
+            print("],")
+        else:
+            print("]")
+    print("])")
+
 
 def homogenize(x):
     # converts points from inhomogeneous to homogeneous coordinates
